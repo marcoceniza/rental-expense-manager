@@ -38,7 +38,7 @@ export interface RegisterInput {
 }
 
 export async function register(input: RegisterInput): Promise<LoginResponse> {
-  const res = await api.post<LoginResponse>('/api/register', input);
+  const res = await api.post<LoginResponse>('/api/v1/register', input);
   await setAccessToken(res.data.token);
   return res.data;
 }
@@ -49,28 +49,26 @@ export interface LoginInput {
 }
 
 export async function login(input: LoginInput): Promise<LoginResponse> {
-  const res = await api.post<LoginResponse>('/api/login', input);
+  const res = await api.post<LoginResponse>('/api/v1/login', input);
   await setAccessToken(res.data.token);
   return res.data;
 }
 
 export async function logout(): Promise<LogoutResponse> {
-  const res = await api.post('/api/logout');
+  const res = await api.post('/api/v1/logout');
   await clearAccessToken();
   return res.data;
 }
 
 export async function me(): Promise<MeResponse> {
-  const res = await api.get<MeResponse>('/api/me');
-  return res.data;
+  return (await api.get<MeResponse>('/api/v1/me')).data;
 }
 
 export async function updateProfile(input: {
   name?: string;
   email?: string;
 }): Promise<UpdateProfileResponse> {
-  const res = await api.patch<UpdateProfileResponse>('/api/me', input);
-  return res.data;
+  return (await api.patch<UpdateProfileResponse>('/api/v1/me', input)).data;
 }
 
 /* --------------------------------------------------------------------------
@@ -98,36 +96,27 @@ export interface ListTransactionsParams {
 }
 
 export async function listTransactions(params: ListTransactionsParams = {}): Promise<TransactionsListResponse> {
-  const query: Record<string, string> = {};
-  if (params.month) query.month = params.month;
-  if (params.type) query.type = params.type;
-  const res = await api.get<TransactionsListResponse>('/api/transactions', { params: query });
-  return res.data;
+  return (await api.get<TransactionsListResponse>('/api/v1/transactions', { params })).data;
 }
 
 export async function createTransaction(input: TransactionInput): Promise<TransactionsResponse> {
-  const res = await api.post<TransactionsResponse>('/api/transactions', input);
-  return res.data;
+  return (await api.post<TransactionsResponse>('/api/v1/transactions', input)).data;
 }
 
 export async function updateTransaction(id: number, input: TransactionUpdateInput): Promise<TransactionsResponse> {
-  const res = await api.patch<TransactionsResponse>(`/api/transactions/${id}`, input);
-  return res.data;
+  return (await api.patch<TransactionsResponse>(`/api/v1/transactions/${id}`, input)).data;
 }
 
 export async function deleteTransaction(id: number): Promise<DeleteResponse> {
-  const res = await api.delete<DeleteResponse>(`/api/transactions/${id}`);
-  return res.data;
+  return (await api.delete<DeleteResponse>(`/api/v1/transactions/${id}`)).data;
 }
 
 export async function restoreTransaction(id: number): Promise<RestoreResponse> {
-  const res = await api.patch<RestoreResponse>(`/api/transactions/${id}/restore`);
-  return res.data;
+  return (await api.patch<RestoreResponse>(`/api/v1/transactions/${id}/restore`)).data;
 }
 
 export async function forceDeleteTransaction(id: number): Promise<ForceDeleteResponse> {
-  const res = await api.delete<ForceDeleteResponse>(`/api/transactions/${id}/force-delete`);
-  return res.data;
+  return (await api.delete<ForceDeleteResponse>(`/api/v1/transactions/${id}/force-delete`)).data;
 }
 
 /* --------------------------------------------------------------------------
@@ -142,26 +131,22 @@ export interface CategoryInput {
 }
 
 export async function listCategories(): Promise<CategoriesListResponse> {
-  const res = await api.get<CategoriesListResponse>('/api/categories');
-  return res.data;
+  return (await api.get<CategoriesListResponse>('/api/v1/categories')).data;
 }
 
 export async function createCategory(input: CategoryInput): Promise<CategoriesListResponse> {
-  const res = await api.post<CategoriesListResponse>('/api/categories', input);
-  return res.data;
+  return (await api.post<CategoriesListResponse>('/api/v1/categories', input)).data;
 }
 
 export async function updateCategory(
   id: number,
   input: CategoryInput,
 ): Promise<CategoriesListResponse> {
-  const res = await api.patch<CategoriesListResponse>(`/api/categories/${id}`, input);
-  return res.data;
+  return (await api.patch<CategoriesListResponse>(`/api/v1/categories/${id}`, input)).data;
 }
 
 export async function deleteCategory(id: number): Promise<DeleteResponse> {
-  const res = await api.delete<DeleteResponse>(`/api/categories/${id}`);
-  return res.data;
+  return (await api.delete<DeleteResponse>(`/api/v1/categories/${id}`)).data;
 }
 
 /** Convert a stored category payload into the API shape. */
@@ -193,26 +178,22 @@ export interface RecurringInput {
 }
 
 export async function listRecurring(): Promise<RecurringListResponse> {
-  const res = await api.get<RecurringListResponse>('/api/recurring');
-  return res.data;
+  return (await api.get<RecurringListResponse>('/api/v1/recurring')).data;
 }
 
 export async function createRecurring(input: RecurringInput): Promise<RecurringListResponse> {
-  const res = await api.post<RecurringListResponse>('/api/recurring', input);
-  return res.data;
+  return (await api.post<RecurringListResponse>('/api/v1/recurring', input)).data;
 }
 
 export async function updateRecurring(
   id: number,
   input: RecurringInput,
 ): Promise<RecurringListResponse> {
-  const res = await api.patch<RecurringListResponse>(`/api/recurring/${id}`, input);
-  return res.data;
+  return (await api.patch<RecurringListResponse>(`/api/v1/recurring/${id}`, input)).data;
 }
 
 export async function deleteRecurring(id: number): Promise<DeleteResponse> {
-  const res = await api.delete<DeleteResponse>(`/api/recurring/${id}`);
-  return res.data;
+  return (await api.delete<DeleteResponse>(`/api/v1/recurring/${id}`)).data;
 }
 
 /* --------------------------------------------------------------------------
@@ -220,23 +201,19 @@ export async function deleteRecurring(id: number): Promise<DeleteResponse> {
  * ------------------------------------------------------------------------ */
 
 export async function dashboardReport(month: string): Promise<ReportsDashboardResponse> {
-  const res = await api.get<ReportsDashboardResponse>('/api/reports/dashboard', { params: { month } });
-  return res.data;
+  return (await api.get<ReportsDashboardResponse>('/api/v1/reports/dashboard', { params: { month } })).data;
 }
 
 export async function annualReport(year: number): Promise<AnnualReportResponse> {
-  const res = await api.get<AnnualReportResponse>('/api/reports/annual', { params: { year } });
-  return res.data;
+  return (await api.get<AnnualReportResponse>('/api/v1/reports/annual', { params: { year } })).data;
 }
 
 export async function charityReport(year: number): Promise<CharityReportResponse> {
-  const res = await api.get<CharityReportResponse>('/api/reports/charity', { params: { year } });
-  return res.data;
+  return (await api.get<CharityReportResponse>('/api/v1/reports/charity', { params: { year } })).data;
 }
 
 export async function othersReport(year: number): Promise<OthersReportResponse> {
-  const res = await api.get<OthersReportResponse>('/api/reports/others', { params: { year } });
-  return res.data;
+  return (await api.get<OthersReportResponse>('/api/v1/reports/others', { params: { year } })).data;
 }
 
 /* --------------------------------------------------------------------------

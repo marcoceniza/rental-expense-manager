@@ -11,53 +11,65 @@ use Illuminate\Support\Facades\Route;
 | PUBLIC AUTHENTICATION
 |---------------------------------------------------------------------------*/
 
-Route::post('/login', [AuthController::class, 'login']);
-Route::post('/register', [AuthController::class, 'register']);
+Route::controller(AuthController::class)->group(function () {
+    Route::post('/login', 'login');
+    Route::post('/register', 'register');
+});
 
 Route::middleware('auth:sanctum')->group(function () {
     /*---------------------------------------------------------------------------
     | AUTHENTICATED USER
     |---------------------------------------------------------------------------*/
 
-    Route::post('/logout', [AuthController::class, 'logout']);
-    Route::get('/me', [AuthController::class, 'me']);
-    Route::patch('/me', [AuthController::class, 'updateProfile']);
+    Route::controller(AuthController::class)->group(function () {
+        Route::post('/logout', 'logout');
+        Route::get('/me', 'me');
+        Route::patch('/me', 'updateProfile');
+    });
 
     /*---------------------------------------------------------------------------
     | TRANSACTIONS
     |---------------------------------------------------------------------------*/
 
-    Route::get('/transactions', [TransactionController::class, 'index']);
-    Route::post('/transactions', [TransactionController::class, 'store']);
-    Route::patch('/transactions/{transaction}', [TransactionController::class, 'update']);
-    Route::delete('/transactions/{transaction}', [TransactionController::class, 'destroy']);
-    Route::patch('/transactions/{id}/restore', [TransactionController::class, 'restore']);
-    Route::delete('/transactions/{id}/force-delete', [TransactionController::class, 'forceDelete']);
+    Route::controller(TransactionController::class)->group(function () {
+        Route::get('/transactions', 'index');
+        Route::post('/transactions', 'store');
+        Route::patch('/transactions/{transaction}', 'update');
+        Route::delete('/transactions/{transaction}', 'destroy');
+        Route::patch('/transactions/{id}/restore', 'restore');
+        Route::delete('/transactions/{id}/force-delete', 'forceDelete');
+    });
 
     /*---------------------------------------------------------------------------
     | CATEGORIES
     |---------------------------------------------------------------------------*/
 
-    Route::get('/categories', [CategoryController::class, 'index']);
-    Route::post('/categories', [CategoryController::class, 'store']);
-    Route::patch('/categories/{category}', [CategoryController::class, 'update']);
-    Route::delete('/categories/{category}', [CategoryController::class, 'destroy']);
+    Route::controller(CategoryController::class)->group(function () {
+        Route::get('/categories', 'index');
+        Route::post('/categories', 'store');
+        Route::patch('/categories/{category}', 'update');
+        Route::delete('/categories/{category}', 'destroy');
+    });
 
     /*---------------------------------------------------------------------------
     | RECURRING
     |---------------------------------------------------------------------------*/
 
-    Route::get('/recurring', [RecurringController::class, 'index']);
-    Route::post('/recurring', [RecurringController::class, 'store']);
-    Route::patch('/recurring/{recurring}', [RecurringController::class, 'update']);
-    Route::delete('/recurring/{recurring}', [RecurringController::class, 'destroy']);
+    Route::controller(RecurringController::class)->group(function () {
+        Route::get('/recurring', 'index');
+        Route::post('/recurring', 'store');
+        Route::patch('/recurring/{recurring}', 'update');
+        Route::delete('/recurring/{recurring}', 'destroy');
+    });
 
     /*---------------------------------------------------------------------------
     | REPORTS
     |---------------------------------------------------------------------------*/
 
-    Route::get('/reports/dashboard', [ReportController::class, 'dashboard']);
-    Route::get('/reports/annual', [ReportController::class, 'annualReport']);
-    Route::get('/reports/charity', [ReportController::class, 'charityReport']);
-    Route::get('/reports/others', [ReportController::class, 'othersReport']);
+    Route::controller(ReportController::class)->group(function () {
+        Route::get('/reports/dashboard', 'dashboard');
+        Route::get('/reports/annual', 'annualReport');
+        Route::get('/reports/charity', 'charityReport');
+        Route::get('/reports/others', 'othersReport');
+    });
 });
