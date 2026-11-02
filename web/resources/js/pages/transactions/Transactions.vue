@@ -1,0 +1,665 @@
+<script setup lang="ts">
+import pagination from '@/ui/pagination.vue';
+import ConfirmDelete from '@/components/ConfirmDelete.vue';
+import TransactionModal from '@/components/TransactionModal.vue';
+import TransactionTrashModal from '@/components/TransactionTrashModal.vue';
+import AppLayout from '@/layouts/AppLayout.vue';
+import type { Auth, Category, PaginatedData, Transaction } from '@/types';
+import { Head, router, useForm, usePage } from '@inertiajs/vue3';
+import { format, parseISO } from 'date-fns';
+import {
+    LoaderCircle,
+    Pencil,
+    Plus,
+    ReceiptText,
+    Search,
+    Trash2,
+} from 'lucide-vue-next';
+import { computed, ref } from 'vue';
+import {
+    destroy,
+    forceDelete,
+    restore,
+    store,
+    update,
+} from '@/actions/App/Http/Controllers/Transactions/TransactionController';
+
+defineOptions({
+    layout: AppLayout,
+    inheritAttrs: false,
+});
+
+const props = defineProps<{
+    transactions: PaginatedData<Transaction>;
+    categories: Category[];
+    trashed: PaginatedData<Transaction> | Transaction[];
+    trashedCount: number;
+    auth: Auth;
+    currentDate: string;
+}>();
+
+const page = usePage();
+const urlParams = new URLSearchParams(page.url.split('?')[1] ?? '');
+
+const searchQuery = ref('');
+const typeFilter = ref(urlParams.get('type') ?? 'all');
+const showModal = ref(false);
+const showTrashModal = ref(false);
+const editingId = ref<number | null>(null);
+const monthFilter = ref(urlParams.get('month') ?? 'all');
+const isMonthFiltering = ref(false);
+
+const form = useForm({
+    transaction_date: props.currentDate,
+    type: 'income',
+    category_id: '',
+    description: '',
+    amount: 0,
+    remarks: '',
+});
+
+const resetFormState = () => {
+    form.clearErrors();
+    form.defaults({
+        transaction_date: props.currentDate,
+        type: 'income',
+        category_id: '',
+        description: '',
+        amount: 0,
+        remarks: '',
+    });
+    form.reset();
+};
+
+const confirmDelete = ref<{
+    show: boolean;
+    id: number | null;
+    name: string;
+}>({
+    show: false,
+    id: null,
+    name: '',
+});
+
+const parseTransactionDate = (value: string) =>
+    parseISO(value.replace(' ', 'T'));
+
+const applyFilters = (source: 'month' | 'type' = 'month') => {
+    const baseUrl = page.url.split('?')[0];
+
+    if (source === 'month') {
+        isMonthFiltering.value = true;
+    }
+
+    router.get(
+        baseUrl,
+        {
+            month: monthFilter.value,
+            type: typeFilter.value,
+            page: 1,
+        },
+        {
+            preserveScroll: true,
+            preserveState: true,
+            replace: true,
+            onFinish: () => {
+                if (source === 'month') {
+                    isMonthFiltering.value = false;
+                }
+            },
+        },
+    );
+};
+
+const filteredTransactions = computed(() => {
+    return props.transactions.data.filter((t: Transaction) => {
+        const search = searchQuery.value.toLowerCase();
+
+        const transactionDate = parseTransactionDate(t.transaction_date);
+        const fields = [
+            t.description,
+            t.category?.name,
+            t.type,
+            t.amount,
+            transactionDate.toLocaleDateString(),
+        ];
+
+        const matchesSearch = fields.some((field) =>
+            String(field ?? '')
+                .toLowerCase()
+                .includes(search),
+        );
+
+        const matchesType =
+            typeFilter.value === 'all' || t.type === typeFilter.value;
+
+        const matchesMonth =
+            monthFilter.value === 'all' ||
+            transactionDate.getMonth() + 1 === parseInt(monthFilter.value, 10);
+
+        const excludeSpecial =
+            t.category?.is_tuition !== true && t.category?.is_other !== true;
+
+        return matchesSearch && matchesType && matchesMonth && excludeSpecial;
+    });
+});
+
+const filteredCategories = computed(() =>
+    props.categories.filter((c: Category) => c.type === form.type),
+);
+
+const normalizedTrashed = computed(() => {
+    return Array.isArray(props.trashed)
+        ? { data: props.trashed }
+        : props.trashed;
+});
+
+const filteredTotals = computed(() => {
+    return filteredTransactions.value.reduce(
+        (acc, t) => {
+            const amount = Number(t.amount) || 0;
+            if (t.type === 'income') acc.income += amount;
+            else if (t.type === 'expense') acc.expense += amount;
+            else if (t.type === 'liability') acc.liability += amount;
+            return acc;
+        },
+        { income: 0, expense: 0, liability: 0 },
+    );
+});
+
+const categoryTypes = ['income', 'expense', 'liability'];
+
+const openModal = (t: Transaction | null = null) => {
+    if (t) {
+        editingId.value = t.id;
+        form.clearErrors();
+        form.defaults({
+            transaction_date: format(
+                parseISO(t.transaction_date),
+                'yyyy-MM-dd',
+            ),
+            type: t.type,
+            category_id: String(t.category_id),
+            description: t.description,
+            amount: t.amount,
+            remarks: t.remarks || '',
+        });
+        form.reset();
+    } else {
+        editingId.value = null;
+        resetFormState();
+    }
+
+    showModal.value = true;
+};
+
+const closeModal = () => {
+    showModal.value = false;
+    editingId.value = null;
+    resetFormState();
+};
+
+const handleSubmit = () => {
+    if (editingId.value) {
+        form.put(update.url({ transaction: editingId.value }), {
+            preserveScroll: true,
+            onSuccess: () => closeModal(),
+        });
+    } else {
+        form.post(store.url(), {
+            preserveScroll: true,
+            onSuccess: () => closeModal(),
+        });
+    }
+};
+
+const confirmDeleteHandler = (id: number, name: string) => {
+    confirmDelete.value = {
+        show: true,
+        id,
+        name,
+    };
+};
+
+const deleteTransaction = () => {
+    if (!confirmDelete.value.id) return;
+
+    form.delete(destroy.url({ transaction: confirmDelete.value.id }), {
+        preserveScroll: true,
+        only: ['transactions', 'trashed', 'trashedCount', 'flash'],
+        onFinish: () => {
+            confirmDelete.value.show = false;
+        },
+    });
+};
+
+const restoreTransaction = (id: number) => {
+    form.patch(restore.url({ id }), {
+        preserveScroll: true,
+        only: ['transactions', 'trashed', 'trashedCount', 'flash'],
+    });
+};
+
+const deletePermanent = (id: number) => {
+    form.delete(forceDelete.url({ id }), {
+        preserveScroll: true,
+        only: ['transactions', 'trashed', 'trashedCount', 'flash'],
+    });
+};
+
+const formatCurrency = (amount: number) => {
+    const value = Number(amount) || 0;
+    const formatted = new Intl.NumberFormat('en-PH', {
+        style: 'currency',
+        currency: 'PHP',
+    }).format(Math.abs(value));
+    return value < 0 ? `- ${formatted}` : formatted;
+};
+
+const goToCurrentMonth = () => {
+    monthFilter.value = String(new Date().getMonth() + 1).padStart(2, '0');
+    applyFilters('month');
+};
+</script>
+
+<template>
+    <Head title="Transactions" />
+    <div class="space-y-8">
+        <div
+            class="flex flex-col justify-between gap-4 md:flex-row md:items-center"
+        >
+            <div>
+                <h2
+                    class="flex items-center gap-3 text-3xl font-bold tracking-tight text-slate-900 max-sm:text-2xl"
+                >
+                    <ReceiptText class="h-8 w-8" />
+                    Transactions
+                </h2>
+                <p class="mt-1 text-slate-500">
+                    Manage all your financial records in one place.
+                </p>
+            </div>
+
+            <div
+                v-if="auth.user?.user_type === 'admin'"
+                class="flex items-center gap-3 max-sm:justify-end"
+            >
+                <button
+                    @click="showTrashModal = true"
+                    class="group relative cursor-pointer rounded-xl border border-slate-200 bg-white p-3 text-slate-400 shadow-sm transition-all hover:border-red-200 hover:text-red-500"
+                >
+                    <Trash2
+                        class="h-5 w-5 transition-transform group-hover:scale-110"
+                    />
+                    <span
+                        v-show="props.trashedCount > 0"
+                        class="absolute -top-2 -right-2 inline-flex items-center justify-center rounded-full bg-red-600 px-2 py-1 text-xs leading-none font-bold text-red-100"
+                        >{{ props.trashedCount }}</span
+                    >
+                </button>
+
+                <button
+                    @click="openModal()"
+                    class="flex cursor-pointer items-center gap-2 rounded-xl bg-blue-600 px-6 py-3 font-bold text-white shadow-lg shadow-blue-200 transition-all hover:bg-blue-700 active:scale-95"
+                >
+                    <Plus class="h-5 w-5" />
+                    Add Transaction
+                </button>
+            </div>
+        </div>
+
+        <div
+            class="flex flex-col items-center gap-4 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm md:flex-row"
+        >
+            <div class="relative w-full flex-1">
+                <Search
+                    class="absolute top-1/2 left-4 h-5 w-5 -translate-y-1/2 text-slate-400"
+                />
+                <input
+                    v-model="searchQuery"
+                    type="text"
+                    placeholder="Search transactions..."
+                    class="w-full rounded-xl border-none bg-slate-50 py-3 pr-4 pl-12 transition-all focus:ring-2 focus:ring-blue-500"
+                />
+            </div>
+
+            <div class="flex w-full items-center gap-2 md:w-auto">
+                <span
+                    class="text-sm font-semibold whitespace-nowrap text-slate-500"
+                    >Type:</span
+                >
+                <select
+                    v-model="typeFilter"
+                    @change="applyFilters('type')"
+                    class="min-w-37.5 cursor-pointer rounded-xl border-none bg-slate-50 px-4 py-3 font-medium text-slate-700 transition-all focus:ring-2 focus:ring-blue-500 max-sm:w-full"
+                >
+                    <option value="all">All Types</option>
+                    <option value="income">Income</option>
+                    <option value="expense">Expense</option>
+                    <option value="liability">Liability</option>
+                </select>
+            </div>
+
+            <div class="flex w-full items-center gap-2 md:w-auto">
+                <span
+                    class="text-sm font-semibold whitespace-nowrap text-slate-500"
+                    >Month:</span
+                >
+                <div class="flex items-center gap-2">
+                    <select
+                        v-model="monthFilter"
+                        @change="applyFilters('month')"
+                        :disabled="isMonthFiltering"
+                        class="min-w-37.5 cursor-pointer rounded-xl border-none bg-slate-50 px-4 py-3 font-medium text-slate-700 transition-all focus:ring-2 focus:ring-blue-500 disabled:cursor-not-allowed disabled:opacity-70 max-sm:w-full"
+                    >
+                        <option value="all">Search by Month</option>
+                        <option value="01">January</option>
+                        <option value="02">February</option>
+                        <option value="03">March</option>
+                        <option value="04">April</option>
+                        <option value="05">May</option>
+                        <option value="06">June</option>
+                        <option value="07">July</option>
+                        <option value="08">August</option>
+                        <option value="09">September</option>
+                        <option value="10">October</option>
+                        <option value="11">November</option>
+                        <option value="12">December</option>
+                    </select>
+                    <LoaderCircle
+                        v-if="isMonthFiltering"
+                        class="h-4 w-4 animate-spin text-blue-600"
+                    />
+                    <button
+                        @click="goToCurrentMonth"
+                        :disabled="isMonthFiltering"
+                        class="cursor-pointer rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm font-semibold whitespace-nowrap text-slate-600 shadow-sm transition-colors hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-70"
+                    >
+                        This Month
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <div class="rounded-2xl border border-slate-200 bg-white shadow-sm">
+            <div class="overflow-x-auto">
+                <table class="w-full text-left">
+                    <thead
+                        class="bg-slate-50 text-xs font-bold text-slate-500 uppercase"
+                    >
+                        <tr>
+                            <th class="px-6 py-4">Date</th>
+                            <th class="px-6 py-4">Description</th>
+                            <th
+                                v-if="auth.user?.user_type === 'admin'"
+                                class="px-6 py-4"
+                            >
+                                Category
+                            </th>
+                            <th class="px-6 py-4">Amount</th>
+                            <th
+                                v-if="auth.user?.user_type === 'admin'"
+                                class="px-6 py-4"
+                            >
+                                Added By
+                            </th>
+                            <th
+                                v-if="auth.user?.user_type === 'admin'"
+                                class="px-6 py-4 text-center"
+                            >
+                                Actions
+                            </th>
+                        </tr>
+                    </thead>
+
+                    <tbody class="divide-y divide-slate-100">
+                        <tr v-if="isMonthFiltering">
+                            <td
+                                :colspan="
+                                    auth.user?.user_type === 'admin' ? 6 : 3
+                                "
+                                class="px-6 py-12 text-center text-slate-500"
+                            >
+                                <div
+                                    class="flex items-center justify-center gap-2"
+                                >
+                                    <LoaderCircle
+                                        class="h-4 w-4 animate-spin text-blue-600"
+                                    />
+                                    <span>Loading transactions...</span>
+                                </div>
+                            </td>
+                        </tr>
+
+                        <tr v-else-if="filteredTransactions.length === 0">
+                            <td
+                                :colspan="
+                                    auth.user?.user_type === 'admin' ? 6 : 3
+                                "
+                                class="px-6 py-12 text-center text-slate-400"
+                            >
+                                <p class="font-medium italic">
+                                    No transactions found.
+                                </p>
+                                <p
+                                    v-if="monthFilter !== 'all'"
+                                    class="mt-2 text-sm"
+                                >
+                                    No records for the selected month. Try a
+                                    different month or
+                                    <button
+                                        @click="
+                                            monthFilter = 'all';
+                                            applyFilters('month');
+                                        "
+                                        class="cursor-pointer text-blue-600 underline hover:text-blue-700"
+                                    >
+                                        show all months</button
+                                    >.
+                                </p>
+                                <p v-else-if="searchQuery" class="mt-2 text-sm">
+                                    Try a different search term.
+                                </p>
+                            </td>
+                        </tr>
+
+                        <tr
+                            v-else
+                            v-for="t in filteredTransactions"
+                            :key="t.id"
+                            class="group transition-colors hover:bg-slate-50"
+                        >
+                            <td class="px-6 py-4 text-sm text-slate-600">
+                                <span class="font-medium text-slate-800">
+                                    {{
+                                        format(
+                                            parseTransactionDate(
+                                                t.transaction_date,
+                                            ),
+                                            'MMM dd, yyyy',
+                                        )
+                                    }}
+                                </span>
+                            </td>
+                            <td class="px-6 py-4">
+                                <p class="text-sm font-medium text-slate-900">
+                                    {{ t.description }}
+                                </p>
+                                <p
+                                    v-if="t.remarks"
+                                    class="mt-0.5 text-xs text-slate-400"
+                                >
+                                    {{ t.remarks }}
+                                </p>
+                            </td>
+                            <td
+                                v-if="auth.user?.user_type === 'admin'"
+                                class="px-6 py-4"
+                            >
+                                <span
+                                    class="rounded-full px-2.5 py-1 text-xs font-semibold"
+                                    :class="{
+                                        'bg-blue-50 text-blue-600':
+                                            t.type === 'income',
+                                        'bg-red-50 text-red-600':
+                                            t.type === 'expense',
+                                        'bg-amber-50 text-amber-600':
+                                            t.type === 'liability',
+                                    }"
+                                >
+                                    {{
+                                        props.categories.find(
+                                            (c) =>
+                                                c.id === Number(t.category_id),
+                                        )?.name || 'Uncategorized'
+                                    }}
+                                </span>
+                            </td>
+                            <td class="px-6 py-4">
+                                <span
+                                    class="text-sm font-bold"
+                                    :class="{
+                                        'text-emerald-600': t.type === 'income',
+                                        'text-red-600': t.type === 'expense',
+                                        'text-amber-600':
+                                            t.type === 'liability',
+                                    }"
+                                >
+                                    {{ t.type === 'income' ? '+' : '-'
+                                    }}{{ formatCurrency(t.amount) }}
+                                </span>
+                            </td>
+                            <td
+                                v-if="auth.user?.user_type === 'admin'"
+                                class="px-6 py-4 text-center text-sm text-slate-600"
+                            >
+                                {{ t.user?.name || '-' }}
+                            </td>
+                            <td
+                                v-if="auth.user?.user_type === 'admin'"
+                                class="px-6 py-4"
+                            >
+                                <div
+                                    class="flex items-center justify-center gap-2 transition-opacity md:opacity-0 md:group-hover:opacity-100"
+                                >
+                                    <button
+                                        type="button"
+                                        variant="secondary"
+                                        size="sm"
+                                        @click="openModal(t)"
+                                        class="cursor-pointer rounded-lg p-2 text-slate-400 transition-colors hover:bg-blue-50 hover:text-blue-600"
+                                    >
+                                        <Pencil class="h-4 w-4" />
+                                    </button>
+
+                                    <button
+                                        type="button"
+                                        variant="danger"
+                                        size="sm"
+                                        @click="
+                                            confirmDeleteHandler(
+                                                t.id,
+                                                t.description,
+                                            )
+                                        "
+                                        class="cursor-pointer rounded-lg p-2 text-slate-400 transition-colors hover:bg-red-50 hover:text-red-600"
+                                    >
+                                        <Trash2 class="h-4 w-4" />
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+                    </tbody>
+                    <tfoot
+                        v-if="filteredTransactions.length > 0"
+                        class="border-t-2 border-slate-200 bg-slate-50"
+                    >
+                        <tr>
+                            <td
+                                :colspan="
+                                    auth.user?.user_type === 'admin' ? 3 : 2
+                                "
+                                class="px-6 py-3 text-xs font-bold tracking-wider text-slate-400 uppercase"
+                            >
+                                Filtered Totals
+                            </td>
+                            <td class="px-6 py-3">
+                                <div class="space-y-1 text-sm font-bold">
+                                    <div class="text-emerald-600">
+                                        Income:
+                                        {{
+                                            formatCurrency(
+                                                filteredTotals.income,
+                                            )
+                                        }}
+                                    </div>
+                                    <div class="text-red-600">
+                                        Expense:
+                                        {{
+                                            formatCurrency(
+                                                filteredTotals.expense,
+                                            )
+                                        }}
+                                    </div>
+                                    <div class="text-amber-600">
+                                        Liability:
+                                        {{
+                                            formatCurrency(
+                                                filteredTotals.liability,
+                                            )
+                                        }}
+                                    </div>
+                                </div>
+                            </td>
+                            <td
+                                v-if="auth.user?.user_type === 'admin'"
+                                colspan="2"
+                            ></td>
+                        </tr>
+                    </tfoot>
+                </table>
+                <pagination
+                    v-if="transactions.last_page > 1"
+                    :pagination="transactions"
+                />
+            </div>
+        </div>
+
+        <TransactionModal
+            v-model:isOpen="showModal"
+            :editingId="editingId"
+            :formData="form"
+            :categoryTypes="categoryTypes"
+            :filteredCategories="filteredCategories"
+            :loading="form.processing"
+            @submit="handleSubmit"
+            @close="closeModal"
+        />
+
+        <ConfirmDelete
+            v-if="confirmDelete.show"
+            :isOpen="true"
+            title="Delete Transaction"
+            :message="confirmDelete.name"
+            :loading="form.processing"
+            actionName="transaction"
+            @confirm="deleteTransaction"
+            @close="
+                () => {
+                    confirmDelete.show = false;
+                }
+            "
+        />
+
+        <TransactionTrashModal
+            :show="showTrashModal"
+            :trashed="normalizedTrashed"
+            :trashedCount="trashedCount"
+            :formatCurrency="formatCurrency"
+            :restore="restoreTransaction"
+            :forceDelete="deletePermanent"
+            :loading="form.processing"
+            @close="showTrashModal = false"
+        />
+    </div>
+</template>

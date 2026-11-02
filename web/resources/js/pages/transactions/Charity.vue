@@ -1,0 +1,468 @@
+<script setup lang="ts">
+import CharityModal from '@/components/CharityModal.vue';
+import ConfirmDateChangeModal from '@/components/ConfirmDateChangeModal.vue';
+import ConfirmDelete from '@/components/ConfirmDelete.vue';
+import pagination from '@/ui/pagination.vue';
+import AppLayout from '@/layouts/AppLayout.vue';
+import type {
+    Category,
+    CharityStats,
+    CharityTransaction,
+    SharedData,
+} from '@/types';
+import { Head, router, useForm, usePage } from '@inertiajs/vue3';
+import { format, parseISO } from 'date-fns';
+import {
+    ArrowDownRight,
+    ArrowUpRight,
+    Heart,
+    Pencil,
+    Trash2,
+} from 'lucide-vue-next';
+import { computed, ref } from 'vue';
+import {
+    destroy,
+    store,
+    update,
+} from '@/actions/App/Http/Controllers/Transactions/TransactionController';
+import { charity as adminCharity } from '@/routes/admin';
+import { charity as userCharity } from '@/routes/user';
+
+defineOptions({
+    layout: AppLayout,
+    inheritAttrs: false,
+});
+
+const props = defineProps<{
+    charityStats: CharityStats;
+    categories: Category[];
+    year: number;
+}>();
+
+const page = usePage<SharedData>();
+
+const isAdmin = page.props.auth?.user?.user_type === 'admin';
+
+const charityRoute = isAdmin ? adminCharity.url() : userCharity.url();
+
+const currentYear = ref<number>(props.year);
+const pendingYear = ref<number | null>(null);
+const showYearModal = ref(false);
+const yearLoading = ref(false);
+
+const showModal = ref(false);
+const editingId = ref<number | null>(null);
+
+const confirmDelete = ref<{
+    show: boolean;
+    id: number | null;
+    name: string;
+}>({
+    show: false,
+    id: null,
+    name: '',
+});
+
+const form = useForm<{
+    transaction_date: string;
+    type: string;
+    category_id: string;
+    description: string;
+    amount: number;
+    remarks: string;
+    redirect: string;
+}>({
+    transaction_date: format(new Date(), 'yyyy-MM-dd'),
+    type: 'expense',
+    category_id: '',
+    description: '',
+    amount: 0,
+    remarks: '',
+    redirect: 'charity',
+});
+
+const categoryMap = computed<Record<number, string>>(() => {
+    const map: Record<number, string> = {};
+
+    props.categories.forEach((c) => {
+        map[c.id] = c.name;
+    });
+
+    return map;
+});
+
+const filteredCategories = computed(() =>
+    props.categories.filter((c) => c.type === form.type),
+);
+
+const categoryTypes = ['income', 'expense', 'liability'];
+
+const handleYearChange = (newYear: number) => {
+    if (newYear === currentYear.value) return;
+
+    pendingYear.value = newYear;
+    showYearModal.value = true;
+};
+
+const prevYear = () => handleYearChange(currentYear.value - 1);
+
+const nextYear = () => handleYearChange(currentYear.value + 1);
+
+const confirmYearChange = () => {
+    if (pendingYear.value !== null) {
+        yearLoading.value = true;
+
+        router.get(
+            charityRoute,
+            { year: pendingYear.value },
+            {
+                preserveScroll: true,
+            },
+        );
+    }
+
+    showYearModal.value = false;
+    pendingYear.value = null;
+};
+
+const cancelYearChange = () => {
+    showYearModal.value = false;
+    pendingYear.value = null;
+};
+
+const label = computed(() =>
+    pendingYear.value ? String(pendingYear.value) : String(currentYear.value),
+);
+
+const openModal = (t: CharityTransaction | null = null) => {
+    if (t) {
+        editingId.value = t.id;
+
+        form.defaults({
+            transaction_date: format(
+                parseISO(t.transaction_date),
+                'yyyy-MM-dd',
+            ),
+            type: t.type,
+            category_id: String(t.category_id),
+            description: t.description,
+            amount: t.amount,
+            remarks: t.remarks || '',
+            redirect: 'admin.charity',
+        });
+    } else {
+        editingId.value = null;
+
+        form.defaults({
+            transaction_date: format(new Date(), 'yyyy-MM-dd'),
+            type: 'expense',
+            category_id: '',
+            description: '',
+            amount: 0,
+            remarks: '',
+            redirect: 'admin.charity',
+        });
+    }
+
+    form.reset();
+    showModal.value = true;
+};
+
+const closeModal = () => {
+    showModal.value = false;
+};
+
+const handleSubmit = () => {
+    if (editingId.value) {
+        form.put(update.url({ transaction: editingId.value }), {
+            preserveScroll: true,
+            onSuccess: () => closeModal(),
+        });
+    } else {
+        form.post(store.url(), {
+            preserveScroll: true,
+            onSuccess: () => closeModal(),
+        });
+    }
+};
+
+const confirmDeleteHandler = (id: number, name: string) => {
+    confirmDelete.value = {
+        show: true,
+        id,
+        name,
+    };
+};
+
+const deleteTransaction = () => {
+    if (!confirmDelete.value.id) return;
+
+    form.delete(
+        destroy.url(
+            { transaction: confirmDelete.value.id },
+            { query: { redirect: 'admin.charity' } },
+        ),
+        {
+            preserveScroll: true,
+            onFinish: () => {
+                confirmDelete.value.show = false;
+            },
+        },
+    );
+};
+
+const formatCurrency = (amount: number) => {
+    const value = Number(amount) || 0;
+    const formatted = new Intl.NumberFormat('en-PH', {
+        style: 'currency',
+        currency: 'PHP',
+    }).format(Math.abs(value));
+    return value < 0 ? `- ${formatted}` : formatted;
+};
+</script>
+
+<template>
+    <Head title="Charity" />
+    <div class="space-y-8">
+        <div
+            class="flex flex-col justify-between gap-4 md:flex-row md:items-center"
+        >
+            <div>
+                <h2
+                    class="flex items-center gap-3 text-3xl font-bold tracking-tight text-slate-900 max-sm:text-2xl"
+                >
+                    <Heart class="h-8 w-8 fill-rose-500 text-rose-500" />
+                    Charity
+                </h2>
+
+                <p class="mt-1 text-slate-500">
+                    Monitor all transactions related to tuition and educational
+                    support.
+                </p>
+            </div>
+
+            <div
+                class="flex items-center gap-3 rounded-xl border border-slate-200 bg-white p-2 shadow-sm max-sm:justify-around"
+            >
+                <button
+                    @click="prevYear"
+                    class="cursor-pointer rounded-lg p-2 transition-colors hover:bg-slate-50"
+                >
+                    <ArrowDownRight class="h-5 w-5 rotate-90 text-slate-400" />
+                </button>
+
+                <span
+                    class="min-w-35 text-center text-sm font-semibold text-slate-700"
+                >
+                    {{ currentYear }}
+                </span>
+
+                <button
+                    @click="nextYear"
+                    class="cursor-pointer rounded-lg p-2 transition-colors hover:bg-slate-50"
+                    :class="{
+                        'cursor-not-allowed opacity-50':
+                            currentYear >= new Date().getFullYear(),
+                    }"
+                    :disabled="currentYear >= new Date().getFullYear()"
+                >
+                    <ArrowUpRight class="h-5 w-5 -rotate-90 text-slate-400" />
+                </button>
+            </div>
+        </div>
+
+        <div
+            class="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm"
+        >
+            <div
+                class="flex items-center justify-between border-b border-slate-100 p-6"
+            >
+                <h3 class="text-lg font-bold text-slate-900">
+                    Tuition Related Transactions
+                </h3>
+
+                <p class="text-red-500">
+                    Total:
+                    <strong>{{
+                        formatCurrency(props.charityStats.expense || 0)
+                    }}</strong>
+                </p>
+            </div>
+
+            <div class="overflow-x-auto">
+                <table class="w-full text-left">
+                    <thead
+                        class="bg-slate-50 text-xs font-bold text-slate-500 uppercase"
+                    >
+                        <tr>
+                            <th class="px-6 py-4">Date</th>
+                            <th class="px-6 py-4">Description</th>
+                            <th v-if="isAdmin" class="px-6 py-4">Category</th>
+                            <th class="px-6 py-4">Amount</th>
+                            <th v-if="isAdmin" class="px-6 py-4">Added By</th>
+                            <th v-if="isAdmin" class="px-6 py-4 text-center">
+                                Actions
+                            </th>
+                        </tr>
+                    </thead>
+
+                    <tbody class="divide-y divide-slate-100">
+                        <tr
+                            v-if="
+                                (props.charityStats?.transactions?.data ?? [])
+                                    .length === 0
+                            "
+                        >
+                            <td
+                                :colspan="isAdmin ? 6 : 3"
+                                class="px-6 py-16 text-center text-slate-400"
+                            >
+                                <div class="flex flex-col items-center gap-3">
+                                    <Heart class="h-10 w-10 text-slate-300" />
+                                    <p class="font-medium italic">
+                                        No tuition-related transactions found
+                                        for this year.
+                                    </p>
+                                    <p class="text-sm">
+                                        Try selecting a different year using the
+                                        navigation above.
+                                    </p>
+                                </div>
+                            </td>
+                        </tr>
+
+                        <tr
+                            v-else
+                            v-for="t in props.charityStats.transactions.data"
+                            :key="t.id"
+                            class="group transition-colors hover:bg-slate-50"
+                        >
+                            <td class="px-6 py-4 text-sm text-slate-600">
+                                {{
+                                    format(
+                                        new Date(t.transaction_date),
+                                        'MMM dd, yyyy',
+                                    )
+                                }}
+                            </td>
+
+                            <td class="px-6 py-4">
+                                <p class="text-sm font-medium text-slate-900">
+                                    {{ t.description }}
+                                </p>
+
+                                <p
+                                    v-if="t.remarks"
+                                    class="mt-0.5 text-xs text-slate-400"
+                                >
+                                    {{ t.remarks }}
+                                </p>
+                            </td>
+
+                            <td v-if="isAdmin" class="px-6 py-4">
+                                <span
+                                    class="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-600"
+                                >
+                                    {{
+                                        categoryMap[t.category_id] ||
+                                        'Uncategorized'
+                                    }}
+                                </span>
+                            </td>
+
+                            <td class="px-6 py-4">
+                                <span
+                                    class="text-sm font-bold"
+                                    :class="{
+                                        'text-emerald-600': t.type === 'income',
+                                        'text-red-600': t.type === 'expense',
+                                        'text-amber-600':
+                                            t.type === 'liability',
+                                    }"
+                                >
+                                    {{ t.type === 'income' ? '+' : '-' }}
+                                    {{ formatCurrency(t.amount) }}
+                                </span>
+                            </td>
+
+                            <td
+                                v-if="isAdmin"
+                                class="px-6 py-4 text-center text-sm text-slate-600"
+                            >
+                                {{ t.user?.name || '-' }}
+                            </td>
+
+                            <td v-if="isAdmin" class="px-6 py-4">
+                                <div
+                                    class="flex items-center justify-center gap-2 transition-opacity md:opacity-0 md:group-hover:opacity-100"
+                                >
+                                    <button
+                                        type="button"
+                                        variant="secondary"
+                                        size="sm"
+                                        @click="openModal(t)"
+                                        class="cursor-pointer rounded-lg p-2 text-slate-400 transition-colors hover:bg-blue-50 hover:text-blue-600"
+                                    >
+                                        <Pencil class="h-4 w-4" />
+                                    </button>
+                                    <button
+                                        type="button"
+                                        variant="danger"
+                                        size="sm"
+                                        @click="
+                                            confirmDeleteHandler(
+                                                t.id,
+                                                t.description,
+                                            )
+                                        "
+                                        class="cursor-pointer rounded-lg p-2 text-slate-400 transition-colors hover:bg-red-50 hover:text-red-600"
+                                    >
+                                        <Trash2 class="h-4 w-4" />
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+                <pagination
+                    v-if="charityStats.transactions.last_page > 1"
+                    :pagination="charityStats.transactions"
+                />
+            </div>
+        </div>
+
+        <CharityModal
+            v-model:isOpen="showModal"
+            :editingId="editingId"
+            :form="form"
+            :categoryTypes="categoryTypes"
+            :filteredCategories="filteredCategories"
+            :loading="form.processing"
+            @submit="handleSubmit"
+            @close="closeModal"
+        />
+
+        <ConfirmDelete
+            v-if="confirmDelete.show"
+            :isOpen="true"
+            title="Delete Transaction"
+            :message="confirmDelete.name"
+            :loading="form.processing"
+            actionName="transaction"
+            @confirm="deleteTransaction"
+            @close="
+                () => {
+                    confirmDelete.show = false;
+                }
+            "
+        />
+
+        <ConfirmDateChangeModal
+            :show="showYearModal"
+            :label="label"
+            :loading="yearLoading"
+            @confirm="confirmYearChange"
+            @cancel="cancelYearChange"
+        />
+    </div>
+</template>

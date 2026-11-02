@@ -1,0 +1,457 @@
+parameters:
+	ignoreErrors:
+		-
+			message: '#^Access to an undefined property App\\Models\\Recurring\:\:\$end_date\.$#'
+			identifier: property.notFound
+			count: 1
+			path: ../app/Console/Commands/GenerateRecurring.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$type\.$#'
+			identifier: property.notFound
+			count: 1
+			path: ../app/Console/Commands/GenerateRecurring.php
+
+		-
+			message: '#^Using nullsafe property access "\?\-\>type" on left side of \?\? is unnecessary\. Use \-\> instead\.$#'
+			identifier: nullsafe.neverNull
+			count: 1
+			path: ../app/Console/Commands/GenerateRecurring.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$email\.$#'
+			identifier: property.notFound
+			count: 1
+			path: ../app/Http/Controllers/LogsController.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$name\.$#'
+			identifier: property.notFound
+			count: 1
+			path: ../app/Http/Controllers/LogsController.php
+
+		-
+			message: '#^Parameter \#1 \$callback of method Illuminate\\Pagination\\AbstractPaginator\<int,App\\Models\\Log\>\:\:through\(\) contains unresolvable type\.$#'
+			identifier: argument.unresolvableType
+			count: 1
+			path: ../app/Http/Controllers/LogsController.php
+
+		-
+			message: '#^Return type of call to method Illuminate\\Pagination\\AbstractPaginator\<int,App\\Models\\Log\>\:\:through\(\) contains unresolvable type\.$#'
+			identifier: method.unresolvableReturnType
+			count: 1
+			path: ../app/Http/Controllers/LogsController.php
+
+		-
+			message: '#^Method App\\Http\\Controllers\\Transactions\\ReportController\:\:annualReport\(\) has no return type specified\.$#'
+			identifier: missingType.return
+			count: 1
+			path: ../app/Http/Controllers/Transactions/ReportController.php
+
+		-
+			message: '#^Method App\\Http\\Controllers\\Transactions\\ReportController\:\:buildMonthlyReport\(\) return type has no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: ../app/Http/Controllers/Transactions/ReportController.php
+
+		-
+			message: '#^Method App\\Http\\Controllers\\Transactions\\ReportController\:\:categorySummary\(\) has no return type specified\.$#'
+			identifier: missingType.return
+			count: 1
+			path: ../app/Http/Controllers/Transactions/ReportController.php
+
+		-
+			message: '#^Method App\\Http\\Controllers\\Transactions\\ReportController\:\:charityIndex\(\) has no return type specified\.$#'
+			identifier: missingType.return
+			count: 1
+			path: ../app/Http/Controllers/Transactions/ReportController.php
+
+		-
+			message: '#^Method App\\Http\\Controllers\\Transactions\\ReportController\:\:charityYearData\(\) has no return type specified\.$#'
+			identifier: missingType.return
+			count: 1
+			path: ../app/Http/Controllers/Transactions/ReportController.php
+
+		-
+			message: '#^Method App\\Http\\Controllers\\Transactions\\ReportController\:\:charityYearData\(\) has parameter \$year with no type specified\.$#'
+			identifier: missingType.parameter
+			count: 1
+			path: ../app/Http/Controllers/Transactions/ReportController.php
+
+		-
+			message: '#^Method App\\Http\\Controllers\\Transactions\\ReportController\:\:dashboardData\(\) return type has no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: ../app/Http/Controllers/Transactions/ReportController.php
+
+		-
+			message: '#^Method App\\Http\\Controllers\\Transactions\\ReportController\:\:getAnnualData\(\) has no return type specified\.$#'
+			identifier: missingType.return
+			count: 1
+			path: ../app/Http/Controllers/Transactions/ReportController.php
+
+		-
+			message: '#^Method App\\Http\\Controllers\\Transactions\\ReportController\:\:getAnnualData\(\) has parameter \$year with no type specified\.$#'
+			identifier: missingType.parameter
+			count: 1
+			path: ../app/Http/Controllers/Transactions/ReportController.php
+
+		-
+			message: '#^Method App\\Http\\Controllers\\Transactions\\ReportController\:\:otherIndex\(\) has no return type specified\.$#'
+			identifier: missingType.return
+			count: 1
+			path: ../app/Http/Controllers/Transactions/ReportController.php
+
+		-
+			message: '#^Method App\\Http\\Controllers\\Transactions\\ReportController\:\:otherYearData\(\) has no return type specified\.$#'
+			identifier: missingType.return
+			count: 1
+			path: ../app/Http/Controllers/Transactions/ReportController.php
+
+		-
+			message: '#^Method App\\Http\\Controllers\\Transactions\\ReportController\:\:otherYearData\(\) has parameter \$year with no type specified\.$#'
+			identifier: missingType.parameter
+			count: 1
+			path: ../app/Http/Controllers/Transactions/ReportController.php
+
+		-
+			message: '#^Method App\\Http\\Controllers\\Transactions\\ReportController\:\:userAnnualReport\(\) has no return type specified\.$#'
+			identifier: missingType.return
+			count: 1
+			path: ../app/Http/Controllers/Transactions/ReportController.php
+
+		-
+			message: '#^Method App\\Http\\Controllers\\Transactions\\ReportController\:\:userCharityReport\(\) has no return type specified\.$#'
+			identifier: missingType.return
+			count: 1
+			path: ../app/Http/Controllers/Transactions/ReportController.php
+
+		-
+			message: '#^Call to an undefined method App\\Models\\Transaction\|Illuminate\\Database\\Eloquent\\Collection\<int, App\\Models\\Transaction\>\:\:forceDelete\(\)\.$#'
+			identifier: method.notFound
+			count: 1
+			path: ../app/Http/Controllers/Transactions/TransactionController.php
+
+		-
+			message: '#^Call to an undefined method App\\Models\\Transaction\|Illuminate\\Database\\Eloquent\\Collection\<int, App\\Models\\Transaction\>\:\:restore\(\)\.$#'
+			identifier: method.notFound
+			count: 1
+			path: ../app/Http/Controllers/Transactions/TransactionController.php
+
+		-
+			message: '#^Method App\\Http\\Controllers\\Transactions\\TransactionController\:\:destroy\(\) has no return type specified\.$#'
+			identifier: missingType.return
+			count: 1
+			path: ../app/Http/Controllers/Transactions/TransactionController.php
+
+		-
+			message: '#^Method App\\Http\\Controllers\\Transactions\\TransactionController\:\:forceDelete\(\) has no return type specified\.$#'
+			identifier: missingType.return
+			count: 1
+			path: ../app/Http/Controllers/Transactions/TransactionController.php
+
+		-
+			message: '#^Method App\\Http\\Controllers\\Transactions\\TransactionController\:\:forceDelete\(\) has parameter \$id with no type specified\.$#'
+			identifier: missingType.parameter
+			count: 1
+			path: ../app/Http/Controllers/Transactions/TransactionController.php
+
+		-
+			message: '#^Method App\\Http\\Controllers\\Transactions\\TransactionController\:\:formatTransactionPayload\(\) has parameter \$transactions with generic class Illuminate\\Pagination\\LengthAwarePaginator but does not specify its types\: TKey, TValue$#'
+			identifier: missingType.generics
+			count: 1
+			path: ../app/Http/Controllers/Transactions/TransactionController.php
+
+		-
+			message: '#^Method App\\Http\\Controllers\\Transactions\\TransactionController\:\:formatTransactionPayload\(\) has parameter \$transactions with generic class Illuminate\\Support\\Collection but does not specify its types\: TKey, TValue$#'
+			identifier: missingType.generics
+			count: 1
+			path: ../app/Http/Controllers/Transactions/TransactionController.php
+
+		-
+			message: '#^Method App\\Http\\Controllers\\Transactions\\TransactionController\:\:formatTransactionPayload\(\) return type has no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: ../app/Http/Controllers/Transactions/TransactionController.php
+
+		-
+			message: '#^Method App\\Http\\Controllers\\Transactions\\TransactionController\:\:index\(\) has no return type specified\.$#'
+			identifier: missingType.return
+			count: 1
+			path: ../app/Http/Controllers/Transactions/TransactionController.php
+
+		-
+			message: '#^Method App\\Http\\Controllers\\Transactions\\TransactionController\:\:restore\(\) has no return type specified\.$#'
+			identifier: missingType.return
+			count: 1
+			path: ../app/Http/Controllers/Transactions/TransactionController.php
+
+		-
+			message: '#^Method App\\Http\\Controllers\\Transactions\\TransactionController\:\:restore\(\) has parameter \$id with no type specified\.$#'
+			identifier: missingType.parameter
+			count: 1
+			path: ../app/Http/Controllers/Transactions/TransactionController.php
+
+		-
+			message: '#^Method App\\Http\\Controllers\\Transactions\\TransactionController\:\:store\(\) has no return type specified\.$#'
+			identifier: missingType.return
+			count: 1
+			path: ../app/Http/Controllers/Transactions/TransactionController.php
+
+		-
+			message: '#^Method App\\Http\\Controllers\\Transactions\\TransactionController\:\:update\(\) has no return type specified\.$#'
+			identifier: missingType.return
+			count: 1
+			path: ../app/Http/Controllers/Transactions/TransactionController.php
+
+		-
+			message: '#^Method App\\Http\\Controllers\\Transactions\\TransactionController\:\:userTransactions\(\) has no return type specified\.$#'
+			identifier: missingType.return
+			count: 1
+			path: ../app/Http/Controllers/Transactions/TransactionController.php
+
+		-
+			message: '#^Method App\\Http\\Requests\\Transactions\\StoreCategoryRequest\:\:rules\(\) return type has no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: ../app/Http/Requests/Transactions/StoreCategoryRequest.php
+
+		-
+			message: '#^Method App\\Http\\Requests\\Transactions\\StoreRecurringRequest\:\:rules\(\) return type has no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: ../app/Http/Requests/Transactions/StoreRecurringRequest.php
+
+		-
+			message: '#^Method App\\Http\\Requests\\Transactions\\StoreTransactionRequest\:\:rules\(\) return type has no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: ../app/Http/Requests/Transactions/StoreTransactionRequest.php
+
+		-
+			message: '#^Access to an undefined property \(object\|string\)\:\:\$type\.$#'
+			identifier: property.notFound
+			count: 1
+			path: ../app/Http/Requests/Transactions/UpdateCategoryRequest.php
+
+		-
+			message: '#^Call to an undefined method \(object\|string\)\:\:transactions\(\)\.$#'
+			identifier: method.notFound
+			count: 1
+			path: ../app/Http/Requests/Transactions/UpdateCategoryRequest.php
+
+		-
+			message: '#^Method App\\Http\\Requests\\Transactions\\UpdateCategoryRequest\:\:rules\(\) return type has no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: ../app/Http/Requests/Transactions/UpdateCategoryRequest.php
+
+		-
+			message: '#^Method App\\Http\\Requests\\UpdateRecurringRequest\:\:rules\(\) return type has no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: ../app/Http/Requests/Transactions/UpdateRecurringRequest.php
+
+		-
+			message: '#^Method App\\Http\\Requests\\Transactions\\UpdateTransactionRequest\:\:rules\(\) return type has no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: ../app/Http/Requests/Transactions/UpdateTransactionRequest.php
+
+		-
+			message: '#^Method App\\Mail\\MonthlyTransactionReport\:\:__construct\(\) has parameter \$data with no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: ../app/Mail/MonthlyTransactionReport.php
+
+		-
+			message: '#^Property App\\Mail\\MonthlyTransactionReport\:\:\$data type has no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: ../app/Mail/MonthlyTransactionReport.php
+
+		-
+			message: '#^Class App\\Models\\Category uses generic trait Illuminate\\Database\\Eloquent\\Factories\\HasFactory but does not specify its types\: TFactory$#'
+			identifier: missingType.generics
+			count: 1
+			path: ../app/Models/Category.php
+
+		-
+			message: '#^Method App\\Models\\Category\:\:recurringTransactions\(\) has no return type specified\.$#'
+			identifier: missingType.return
+			count: 1
+			path: ../app/Models/Category.php
+
+		-
+			message: '#^Method App\\Models\\Category\:\:transactions\(\) return type with generic class Illuminate\\Database\\Eloquent\\Relations\\HasMany does not specify its types\: TRelatedModel, TDeclaringModel$#'
+			identifier: missingType.generics
+			count: 1
+			path: ../app/Models/Category.php
+
+		-
+			message: '#^Method App\\Models\\Log\:\:user\(\) return type with generic class Illuminate\\Database\\Eloquent\\Relations\\BelongsTo does not specify its types\: TRelatedModel, TDeclaringModel$#'
+			identifier: missingType.generics
+			count: 1
+			path: ../app/Models/Log.php
+
+		-
+			message: '#^Method App\\Models\\Recurring\:\:category\(\) return type with generic class Illuminate\\Database\\Eloquent\\Relations\\BelongsTo does not specify its types\: TRelatedModel, TDeclaringModel$#'
+			identifier: missingType.generics
+			count: 1
+			path: ../app/Models/Recurring.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$id\.$#'
+			identifier: property.notFound
+			count: 1
+			path: ../app/Models/Transaction.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$name\.$#'
+			identifier: property.notFound
+			count: 1
+			path: ../app/Models/Transaction.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$type\.$#'
+			identifier: property.notFound
+			count: 1
+			path: ../app/Models/Transaction.php
+
+		-
+			message: '#^Class App\\Models\\Transaction uses generic trait Illuminate\\Database\\Eloquent\\Factories\\HasFactory but does not specify its types\: TFactory$#'
+			identifier: missingType.generics
+			count: 1
+			path: ../app/Models/Transaction.php
+
+		-
+			message: '#^Method App\\Models\\Transaction\:\:category\(\) return type with generic class Illuminate\\Database\\Eloquent\\Relations\\BelongsTo does not specify its types\: TRelatedModel, TDeclaringModel$#'
+			identifier: missingType.generics
+			count: 1
+			path: ../app/Models/Transaction.php
+
+		-
+			message: '#^Method App\\Models\\Transaction\:\:recurringCategoryOptions\(\) return type with generic class Illuminate\\Support\\Collection does not specify its types\: TKey, TValue$#'
+			identifier: missingType.generics
+			count: 1
+			path: ../app/Models/Transaction.php
+
+		-
+			message: '#^Method App\\Models\\Transaction\:\:scopeFiltered\(\) has no return type specified\.$#'
+			identifier: missingType.return
+			count: 1
+			path: ../app/Models/Transaction.php
+
+		-
+			message: '#^Method App\\Models\\Transaction\:\:scopeFiltered\(\) has parameter \$end with no type specified\.$#'
+			identifier: missingType.parameter
+			count: 1
+			path: ../app/Models/Transaction.php
+
+		-
+			message: '#^Method App\\Models\\Transaction\:\:scopeFiltered\(\) has parameter \$query with no type specified\.$#'
+			identifier: missingType.parameter
+			count: 1
+			path: ../app/Models/Transaction.php
+
+		-
+			message: '#^Method App\\Models\\Transaction\:\:scopeFiltered\(\) has parameter \$start with no type specified\.$#'
+			identifier: missingType.parameter
+			count: 1
+			path: ../app/Models/Transaction.php
+
+		-
+			message: '#^Method App\\Models\\Transaction\:\:scopeFiltered\(\) has parameter \$user with no type specified\.$#'
+			identifier: missingType.parameter
+			count: 1
+			path: ../app/Models/Transaction.php
+
+		-
+			message: '#^Method App\\Models\\Transaction\:\:user\(\) return type with generic class Illuminate\\Database\\Eloquent\\Relations\\BelongsTo does not specify its types\: TRelatedModel, TDeclaringModel$#'
+			identifier: missingType.generics
+			count: 1
+			path: ../app/Models/Transaction.php
+
+		-
+			message: '#^Parameter \#1 \$callback of method Illuminate\\Database\\Eloquent\\Collection\<\(int\|string\),Illuminate\\Database\\Eloquent\\Collection\<int, App\\Models\\Transaction\>\>\:\:map\(\) contains unresolvable type\.$#'
+			identifier: argument.unresolvableType
+			count: 1
+			path: ../app/Models/Transaction.php
+
+		-
+			message: '#^Parameter \#1 \$callback of method Illuminate\\Support\\Collection\<int,App\\Models\\Transaction\>\:\:filter\(\) expects \(callable\(App\\Models\\Transaction, int\)\: bool\)\|null, Closure\(mixed\)\: \(Illuminate\\Database\\Eloquent\\Model\|null\) given\.$#'
+			identifier: argument.type
+			count: 1
+			path: ../app/Models/Transaction.php
+
+		-
+			message: '#^Return type of call to method Illuminate\\Database\\Eloquent\\Collection\<\(int\|string\),Illuminate\\Database\\Eloquent\\Collection\<int, App\\Models\\Transaction\>\>\:\:map\(\) contains unresolvable type\.$#'
+			identifier: method.unresolvableReturnType
+			count: 1
+			path: ../app/Models/Transaction.php
+
+		-
+			message: '#^Return type of call to method Illuminate\\Support\\Collection\<\(int\|string\),array\<string, mixed\>\>\:\:values\(\) contains unresolvable type\.$#'
+			identifier: method.unresolvableReturnType
+			count: 1
+			path: ../app/Models/Transaction.php
+
+		-
+			message: '#^Ternary operator condition is always true\.$#'
+			identifier: ternary.alwaysTrue
+			count: 2
+			path: ../app/Services/ActivityLogRecorder.php
+
+		-
+			message: '#^Call to an undefined method Illuminate\\Database\\Schema\\ColumnDefinition\:\:constrained\(\)\.$#'
+			identifier: method.notFound
+			count: 3
+			path: ../database/migrations/2026_04_16_092248_create_transactions_table.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$id\.$#'
+			identifier: property.notFound
+			count: 1
+			path: ../database/seeders/CategoryRecurringTransactionSeeder.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$type\.$#'
+			identifier: property.notFound
+			count: 1
+			path: ../database/seeders/CategoryRecurringTransactionSeeder.php
+
+		-
+			message: '#^Method Database\\Seeders\\CategoryRecurringTransactionSeeder\:\:createRecurrings\(\) return type has no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: ../database/seeders/CategoryRecurringTransactionSeeder.php
+
+		-
+			message: '#^Method Database\\Seeders\\CategoryRecurringTransactionSeeder\:\:createTransactions\(\) has parameter \$categories with generic class Illuminate\\Database\\Eloquent\\Collection but does not specify its types\: TKey, TModel$#'
+			identifier: missingType.generics
+			count: 1
+			path: ../database/seeders/CategoryRecurringTransactionSeeder.php
+
+		-
+			message: '#^Method Database\\Seeders\\CategoryRecurringTransactionSeeder\:\:createUser\(\) has parameter \$attributes with no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: ../database/seeders/CategoryRecurringTransactionSeeder.php
+
+		-
+			message: '#^Offset ''category_type'' on array\{date\: ''2026\-01\-02'', amount\: 800\.0, description\: ''Loan payment'', category_type\: ''liability''\}\|array\{date\: ''2026\-01\-05'', amount\: 45000\.0, description\: ''January Salary'', category_type\: ''income''\}\|array\{date\: ''2026\-01\-08'', amount\: 12500\.0, description\: ''Freelance project…'', category_type\: ''income''\}\|array\{date\: ''2026\-01\-10'', amount\: 3200\.0, description\: ''Electricity bill'', category_type\: ''expense''\}\|array\{date\: ''2026\-01\-12'', amount\: 2800\.0, description\: ''Internet bill'', category_type\: ''expense''\}\|array\{date\: ''2026\-01\-15'', amount\: 1800\.0, description\: ''Grocery shopping'', category_type\: ''expense''\}\|array\{date\: ''2026\-01\-15'', amount\: 2500\.0, description\: ''Bonus payment'', category_type\: ''income''\}\|array\{date\: ''2026\-01\-20'', amount\: 2100\.0, description\: ''Transportation'', category_type\: ''expense''\}\|array\{date\: ''2026\-02\-01'', amount\: 1500\.0, description\: ''Credit card payment'', category_type\: ''liability''\}\|array\{date\: ''2026\-02\-03'', amount\: 52000\.0, description\: ''February Salary'', category_type\: ''income''\}\|array\{date\: ''2026\-02\-05'', amount\: 3500\.0, description\: ''Restaurant dinner'', category_type\: ''expense''\}\|array\{date\: ''2026\-02\-10'', amount\: 8000\.0, description\: ''Investment return'', category_type\: ''income''\}\|array\{date\: ''2026\-02\-11'', amount\: 2500\.0, description\: ''Water bill'', category_type\: ''expense''\}\|array\{date\: ''2026\-02\-25'', amount\: 1500\.0, description\: ''Medical expenses'', category_type\: ''expense''\}\|array\{date\: ''2026\-03\-01'', amount\: 2000\.0, description\: ''Mortgage payment'', category_type\: ''liability''\}\|array\{date\: ''2026\-03\-05'', amount\: 48000\.0, description\: ''March Salary'', category_type\: ''income''\}\|array\{date\: ''2026\-03\-08'', amount\: 4200\.0, description\: ''Car maintenance'', category_type\: ''expense''\}\|array\{date\: ''2026\-03\-12'', amount\: 3000\.0, description\: ''Side hustle income'', category_type\: ''income''\}\|array\{date\: ''2026\-03\-15'', amount\: 3600\.0, description\: ''Internet bill'', category_type\: ''expense''\}\|array\{date\: ''2026\-03\-18'', amount\: 2400\.0, description\: ''Grocery shopping'', category_type\: ''expense''\}\|array\{date\: ''2026\-03\-22'', amount\: 1200\.0, description\: ''Movie tickets'', category_type\: ''expense''\}\|array\{date\: ''2026\-03\-28'', amount\: 5000\.0, description\: ''Monthly rent'', category_type\: ''expense''\} on left side of \?\? always exists and is not nullable\.$#'
+			identifier: nullCoalesce.offset
+			count: 2
+			path: ../database/seeders/CategoryRecurringTransactionSeeder.php
+
+		-
+			message: '#^Offset ''is_other'' on array\{type\: ''expense'', name\: ''Dining Out''\|''Groceries''\|''Healthcare''\|''Rent''\|''Transportation''\|''Utilities'', is_tuition\: false, is_other\: false\}\|array\{type\: ''income'', name\: ''Freelance''\|''Investment Returns''\|''Salary'', is_tuition\: false, is_other\: false\}\|array\{type\: ''liability'', name\: ''Credit Card''\|''Loan Payment''\|''Mortgage'', is_tuition\: false, is_other\: false\}\|array\{type\: ''other'', name\: ''Other Expenses''\|''Other Income'', is_tuition\: false, is_other\: true\}\|array\{type\: ''tuition'', name\: ''Tuition Fees'', is_tuition\: true, is_other\: false\} on left side of \?\? always exists and is not nullable\.$#'
+			identifier: nullCoalesce.offset
+			count: 1
+			path: ../database/seeders/CategoryRecurringTransactionSeeder.php
+
+		-
+			message: '#^Offset ''is_tuition'' on array\{type\: ''expense'', name\: ''Dining Out''\|''Groceries''\|''Healthcare''\|''Rent''\|''Transportation''\|''Utilities'', is_tuition\: false, is_other\: false\}\|array\{type\: ''income'', name\: ''Freelance''\|''Investment Returns''\|''Salary'', is_tuition\: false, is_other\: false\}\|array\{type\: ''liability'', name\: ''Credit Card''\|''Loan Payment''\|''Mortgage'', is_tuition\: false, is_other\: false\}\|array\{type\: ''other'', name\: ''Other Expenses''\|''Other Income'', is_tuition\: false, is_other\: true\}\|array\{type\: ''tuition'', name\: ''Tuition Fees'', is_tuition\: true, is_other\: false\} on left side of \?\? always exists and is not nullable\.$#'
+			identifier: nullCoalesce.offset
+			count: 1
+			path: ../database/seeders/CategoryRecurringTransactionSeeder.php
