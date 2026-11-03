@@ -1,15 +1,8 @@
 import React, { useState } from 'react';
-import {
-  View,
-  Text,
-  ScrollView,
-  StyleSheet,
-  TouchableOpacity,
-  TextInput,
-} from 'react-native';
+import { View, Text, ScrollView, TouchableOpacity, TextInput } from 'react-native';
 import { Tag, Search } from 'lucide-react-native';
 import { useApp } from '../context/AppContext';
-import { RNCard } from '../components/NativeComponents';
+import { Card } from '../components/DisplayComponents';
 
 export default function CategoriesScreen() {
   const { categories } = useApp();
@@ -23,170 +16,72 @@ export default function CategoriesScreen() {
   });
 
   return (
-    <ScrollView className="flex-1 bg-slate-50" contentContainerStyle={styles.contentContainer}>
-      {/* Header */}
-      <View style={styles.header}>
-        <View style={styles.titleRow}>
-          <Tag size={20} color="#1e293b" />
-          <Text style={styles.titleText}>Categories</Text>
+    <ScrollView
+      className="flex-1 bg-slate-50"
+      keyboardShouldPersistTaps="handled"
+      keyboardDismissMode="on-drag"
+    >
+      <View className="gap-3.5 px-4 pb-9 pt-4">
+        <View className="gap-1">
+          <View className="flex-row items-center gap-2">
+            <Tag size={20} color="#1e293b" />
+            <Text className="text-xl font-extrabold text-slate-900">Categories</Text>
+          </View>
+          <Text className="text-xs text-slate-500">Manage income and expense categories.</Text>
         </View>
-        <Text style={styles.subtitleText}>Manage income and expense categories.</Text>
-      </View>
 
-      {/* Search */}
-      <View style={styles.searchBox}>
-        <Search size={16} color="#94a3b8" />
-        <TextInput
-          value={searchTerm}
-          onChangeText={setSearchTerm}
-          placeholder="Search categories..."
-          placeholderTextColor="#94a3b8"
-          style={styles.searchInput}
-        />
-      </View>
+        <View className="flex-row items-center gap-2 rounded-[10px] border border-slate-200 bg-white px-3 py-2">
+          <Search size={16} color="#94a3b8" />
+          <TextInput
+            value={searchTerm}
+            onChangeText={setSearchTerm}
+            placeholder="Search categories..."
+            placeholderTextColor="#94a3b8"
+            className="flex-1 text-[13px] text-slate-900"
+          />
+        </View>
 
-      {/* Type Filter */}
-      <View style={styles.typeRow}>
-        {['All', 'Expense', 'Income', 'Liability'].map((t) => (
-          <TouchableOpacity
-            key={t}
-            onPress={() => setSelectedType(t)}
-            style={[styles.typeBtn, selectedType === t && styles.typeBtnActive]}
-          >
-            <Text style={[styles.typeBtnText, selectedType === t && styles.typeBtnTextActive]}>
-              {t}
-            </Text>
-          </TouchableOpacity>
-        ))}
-      </View>
-
-      {/* Categories Cards */}
-      <View style={styles.categoriesGrid}>
-        {filtered.map((cat) => {
-          const isInc = cat.type === 'INCOME';
-          const isLiab = cat.type === 'LIABILITY';
-
-          return (
-            <RNCard key={cat.id} style={styles.catCard}>
-              <View
-                style={[
-                  styles.iconBox,
-                  {
-                    backgroundColor: isInc ? '#eff6ff' : isLiab ? '#fffbeb' : '#fef2f2',
-                  },
-                ]}
+        <View className="flex-row gap-2">
+          {['All', 'Expense', 'Income', 'Liability'].map((type) => {
+            const isSelected = selectedType === type;
+            return (
+              <TouchableOpacity
+                key={type}
+                onPress={() => setSelectedType(type)}
+                className={`rounded-lg border px-3 py-1.5 ${isSelected ? 'border-blue-700 bg-blue-700' : 'border-slate-200 bg-white'}`}
               >
-                <Tag
-                  size={16}
-                  color={isInc ? '#2563eb' : isLiab ? '#d97706' : '#dc2626'}
-                />
-              </View>
+                <Text className={`text-[11px] font-semibold ${isSelected ? 'text-white' : 'text-slate-600'}`}>
+                  {type}
+                </Text>
+              </TouchableOpacity>
+            );
+          })}
+        </View>
 
-              <Text style={styles.catName}>{cat.name}</Text>
-              <Text
-                style={[
-                  styles.catTypeTag,
-                  {
-                    color: isInc ? '#2563eb' : isLiab ? '#d97706' : '#dc2626',
-                  },
-                ]}
-              >
-                {cat.type}
-              </Text>
-            </RNCard>
-          );
-        })}
+        <View className="gap-2.5">
+          {filtered.map((cat) => {
+            const isIncome = cat.type === 'INCOME';
+            const isLiability = cat.type === 'LIABILITY';
+            const color = isIncome ? '#2563eb' : isLiability ? '#d97706' : '#dc2626';
+            const iconBg = isIncome ? '#eff6ff' : isLiability ? '#fffbeb' : '#fef2f2';
+
+            return (
+              <Card key={cat.id} className="gap-2 p-4">
+                <View
+                  className="h-8 w-8 items-center justify-center rounded-lg"
+                  style={{ backgroundColor: iconBg }}
+                >
+                  <Tag size={16} color={color} />
+                </View>
+                <Text className="text-sm font-bold leading-[18px] text-slate-900">{cat.name}</Text>
+                <Text className="text-[10px] font-extrabold tracking-[0.5px]" style={{ color }}>
+                  {cat.type}
+                </Text>
+              </Card>
+            );
+          })}
+        </View>
       </View>
     </ScrollView>
   );
 }
-
-const styles = StyleSheet.create({
-  contentContainer: {
-    padding: 16,
-    gap: 14,
-    paddingBottom: 36,
-  },
-  header: {
-    gap: 4,
-  },
-  titleRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  titleText: {
-    fontSize: 20,
-    fontWeight: '800',
-    color: '#0f172a',
-  },
-  subtitleText: {
-    fontSize: 12,
-    color: '#64748b',
-  },
-  searchBox: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    backgroundColor: '#ffffff',
-    borderWidth: 1,
-    borderColor: '#e2e8f0',
-    borderRadius: 10,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-  },
-  searchInput: {
-    flex: 1,
-    fontSize: 13,
-    color: '#0f172a',
-  },
-  typeRow: {
-    flexDirection: 'row',
-    gap: 8,
-  },
-  typeBtn: {
-    paddingVertical: 6,
-    paddingHorizontal: 12,
-    borderRadius: 8,
-    backgroundColor: '#ffffff',
-    borderWidth: 1,
-    borderColor: '#e2e8f0',
-  },
-  typeBtnActive: {
-    backgroundColor: '#1a56db',
-    borderColor: '#1a56db',
-  },
-  typeBtnText: {
-    fontSize: 11,
-    color: '#475569',
-    fontWeight: '600',
-  },
-  typeBtnTextActive: {
-    color: '#ffffff',
-  },
-  categoriesGrid: {
-    gap: 10,
-  },
-  catCard: {
-    padding: 16,
-    gap: 8,
-  },
-  iconBox: {
-    width: 32,
-    height: 32,
-    borderRadius: 8,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  catName: {
-    fontSize: 14,
-    fontWeight: '700',
-    color: '#0f172a',
-    lineHeight: 18,
-  },
-  catTypeTag: {
-    fontSize: 10,
-    fontWeight: '800',
-    letterSpacing: 0.5,
-  },
-});

@@ -1,184 +1,79 @@
 import React from 'react';
-import {
-  View,
-  Text,
-  ScrollView,
-  StyleSheet,
-  TouchableOpacity,
-} from 'react-native';
+import { View, Text, ScrollView, TouchableOpacity } from 'react-native';
 import { Heart, Trash2 } from 'lucide-react-native';
 import { useApp } from '../context/AppContext';
-import { RNCard, RNBadge } from '../components/NativeComponents';
+import { Card, Badge } from '../components/DisplayComponents';
 import { formatCurrency } from '../utils/formatters';
 
 export default function CharityScreen() {
   const { transactions, deleteTransaction } = useApp();
 
   const charityList = transactions.filter(
-    (t) => t.isCharity || t.category === 'Tuition' || t.category === 'Donation'
+    (transaction) =>
+      transaction.isCharity ||
+      transaction.category === 'Tuition' ||
+      transaction.category === 'Donation',
   );
-
-  const total = charityList.reduce((sum, t) => sum + t.amount, 0);
+  const total = charityList.reduce((sum, transaction) => sum + transaction.amount, 0);
 
   return (
-    <ScrollView className="flex-1 bg-slate-50" contentContainerStyle={styles.contentContainer}>
-      {/* Header */}
-      <View style={styles.header}>
-        <View style={styles.titleRow}>
-          <Heart size={20} color="#f43f5e" fill="#f43f5e" />
-          <Text style={styles.titleText}>Charity</Text>
+    <ScrollView className="flex-1 bg-slate-50">
+      <View className="gap-3.5 px-4 pb-9 pt-4">
+        <View className="gap-1">
+          <View className="flex-row items-center gap-2">
+            <Heart size={20} color="#f43f5e" fill="#f43f5e" />
+            <Text className="text-xl font-extrabold text-slate-900">Charity</Text>
+          </View>
+          <Text className="text-xs text-slate-500">
+            Monitor all transactions related to tuition and educational support.
+          </Text>
         </View>
-        <Text style={styles.subtitleText}>
-          Monitor all transactions related to tuition and educational support.
-        </Text>
-      </View>
 
-      {/* Total Card */}
-      <RNCard style={styles.totalCard}>
-        <Text style={styles.totalLabel}>TUITION & EDUCATIONAL SUPPORT TOTAL</Text>
-        <Text style={styles.totalVal}>{formatCurrency(total, { isNegative: true })}</Text>
-        <Text style={styles.totalSub}>Year 2026</Text>
-      </RNCard>
+        <Card className="gap-1 border-l-4 border-l-rose-500 p-4">
+          <Text className="text-[10px] font-extrabold tracking-[0.8px] text-slate-400">
+            TUITION &amp; EDUCATIONAL SUPPORT TOTAL
+          </Text>
+          <Text className="mt-0.5 text-[22px] font-black text-red-600">
+            {formatCurrency(total, { isNegative: true })}
+          </Text>
+          <Text className="text-[11px] text-slate-500">Year 2026</Text>
+        </Card>
 
-      {/* List */}
-      <View style={styles.listSection}>
-        <Text style={styles.listHeader}>
-          Tuition Related Transactions ({charityList.length})
-        </Text>
+        <View className="gap-2.5">
+          <Text className="text-[13px] font-bold text-slate-700">
+            Tuition Related Transactions ({charityList.length})
+          </Text>
 
-        {charityList.map((item) => (
-          <RNCard key={item.id} style={styles.itemCard}>
-            <View style={styles.itemTop}>
-              <View style={styles.descWrap}>
-                <Text style={styles.descText}>{item.description}</Text>
-                {item.subDescription && (
-                  <Text style={styles.subDescText}>{item.subDescription}</Text>
-                )}
+          {charityList.map((item) => (
+            <Card key={item.id} className="gap-2 p-3.5">
+              <View className="flex-row items-start justify-between">
+                <View className="mr-2.5 flex-1">
+                  <Text className="text-sm font-bold text-slate-900">{item.description}</Text>
+                  {item.subDescription && (
+                    <Text className="mt-px text-[11px] text-slate-400">{item.subDescription}</Text>
+                  )}
+                </View>
+                <Text className="text-sm font-extrabold text-red-600">
+                  {formatCurrency(item.amount, { isNegative: true })}
+                </Text>
               </View>
-              <Text style={styles.amountText}>
-                {formatCurrency(item.amount, { isNegative: true })}
-              </Text>
-            </View>
 
-            <View style={styles.itemBottom}>
-              <RNBadge label={item.category} type="DEFAULT" />
-              <View style={styles.metaWrap}>
-                <Text style={styles.dateText}>{item.date}</Text>
-                <TouchableOpacity
-                  onPress={() => deleteTransaction(item.id)}
-                  style={styles.trashBtn}
-                >
-                  <Trash2 size={14} color="#94a3b8" />
-                </TouchableOpacity>
+              <View className="flex-row items-center justify-between border-t border-slate-50 pt-1.5">
+                <Badge label={item.category} type="DEFAULT" />
+                <View className="flex-row items-center gap-2">
+                  <Text className="text-[11px] text-slate-500">{item.date}</Text>
+                  <TouchableOpacity
+                    onPress={() => deleteTransaction(item.id)}
+                    className="p-1"
+                  >
+                    <Trash2 size={14} color="#94a3b8" />
+                  </TouchableOpacity>
+                </View>
               </View>
-            </View>
-          </RNCard>
-        ))}
+            </Card>
+          ))}
+        </View>
       </View>
     </ScrollView>
   );
 }
-
-const styles = StyleSheet.create({
-  contentContainer: {
-    padding: 16,
-    gap: 14,
-    paddingBottom: 36,
-  },
-  header: {
-    gap: 4,
-  },
-  titleRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  titleText: {
-    fontSize: 20,
-    fontWeight: '800',
-    color: '#0f172a',
-  },
-  subtitleText: {
-    fontSize: 12,
-    color: '#64748b',
-  },
-  totalCard: {
-    padding: 16,
-    backgroundColor: '#ffffff',
-    gap: 4,
-    borderLeftWidth: 4,
-    borderLeftColor: '#f43f5e',
-  },
-  totalLabel: {
-    fontSize: 10,
-    fontWeight: '800',
-    color: '#94a3b8',
-    letterSpacing: 0.8,
-  },
-  totalVal: {
-    fontSize: 22,
-    fontWeight: '900',
-    color: '#dc2626',
-    marginTop: 2,
-  },
-  totalSub: {
-    fontSize: 11,
-    color: '#64748b',
-  },
-  listSection: {
-    gap: 10,
-  },
-  listHeader: {
-    fontSize: 13,
-    fontWeight: '700',
-    color: '#334155',
-  },
-  itemCard: {
-    padding: 14,
-    gap: 8,
-  },
-  itemTop: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
-  },
-  descWrap: {
-    flex: 1,
-    marginRight: 10,
-  },
-  descText: {
-    fontSize: 14,
-    fontWeight: '700',
-    color: '#0f172a',
-  },
-  subDescText: {
-    fontSize: 11,
-    color: '#94a3b8',
-    marginTop: 1,
-  },
-  amountText: {
-    fontSize: 14,
-    fontWeight: '800',
-    color: '#dc2626',
-  },
-  itemBottom: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingTop: 6,
-    borderTopWidth: 1,
-    borderTopColor: '#f8fafc',
-  },
-  metaWrap: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  dateText: {
-    fontSize: 11,
-    color: '#64748b',
-  },
-  trashBtn: {
-    padding: 4,
-  },
-});

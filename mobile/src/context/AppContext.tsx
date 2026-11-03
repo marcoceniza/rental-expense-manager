@@ -16,12 +16,24 @@ import {
   INITIAL_ACTIVITY_LOGS,
   INITIAL_USERS,
 } from '../data/initialData';
+import {
+  login as apiLogin,
+  logout as apiLogout,
+  me as apiMe,
+} from '../services/api';
+import { clearAccessToken, getAccessToken } from '../services/axios';
+import type { ApiUser } from '../services/types';
+import { isAxiosError } from 'axios';
 
 interface AppContextType {
   activeTab: NavTab;
   setActiveTab: (tab: NavTab) => void;
   currentUser: UserAccount;
-  setCurrentUser: (user: UserAccount) => void;
+  isAuthenticated: boolean;
+  isAuthLoading: boolean;
+  authError: string | null;
+  signIn: (email: string, password: string) => Promise<void>;
+  signOut: () => Promise<void>;
   transactions: Transaction[];
   categories: Category[];
   recurring: RecurringTransaction[];
@@ -29,26 +41,28 @@ interface AppContextType {
   users: UserAccount[];
   addTransaction: (tx: Omit<Transaction, 'id' | 'addedBy'>) => void;
   deleteTransaction: (id: string) => void;
-  bulkDeleteTransactions: (ids: string[]) => void;
-  addCategory: (cat: Omit<Category, 'id'>) => void;
-  deleteCategory: (id: string) => void;
-  addRecurring: (rec: Omit<RecurringTransaction, 'id'>) => void;
   deleteRecurring: (id: string) => void;
   addUser: (name: string, email: string) => void;
-  addActivityLog: (log: Omit<ActivityLog, 'id' | 'timestamp'>) => void;
-  isMobileSidebarOpen: boolean;
-  setIsMobileSidebarOpen: (open: boolean) => void;
-  viewMode: 'desktop' | 'mobile-preview' | 'responsive';
-  setViewMode: (mode: 'desktop' | 'mobile-preview' | 'responsive') => void;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
 
+function toUserAccount(user: Pick<ApiUser, 'id' | 'name' | 'email' | 'user_type'>): UserAccount {
+  return {
+    id: String(user.id),
+    name: user.name,
+    email: user.email,
+    createdAt: new Date().toISOString().split('T')[0],
+    role: user.user_type === 'admin' ? 'Admin' : 'Standard',
+  };
+}
+
 export function AppProvider({ children }: { children: React.ReactNode }) {
   const [activeTab, setActiveTab] = useState<NavTab>('dashboard');
-  const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
-  const [viewMode, setViewMode] = useState<'desktop' | 'mobile-preview' | 'responsive'>('responsive');
   const [currentUser, setCurrentUser] = useState<UserAccount>(INITIAL_USERS[0]);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [isAuthLoading, setIsAuthLoading] = useState(true);
+  const [authError, setAuthError] = useState<string | null>(null);
   const [transactions, setTransactions] = useState<Transaction[]>(INITIAL_TRANSACTIONS);
   const [categories, setCategories] = useState<Category[]>(INITIAL_CATEGORIES);
   const [recurring, setRecurring] = useState<RecurringTransaction[]>(INITIAL_RECURRING);
@@ -60,8 +74,45 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     let isActive = true;
 
+    const restoreSession = async () => {
+      try {
+        const token = await getAccessToken();
+        if (token) {
+          try {
+            const response = await apiMe();
+            if (isActive) {
+              setCurrentUser(toUserAccount(response.user));
+              setIsAuthenticated(true);
+            }
+          } catch (error: unknown) {
+            if (isAxiosError(error) && [401, 403].includes(error.response?.status ?? 0)) {
+              await clearAccessToken();
+            } else {
+              throw error;
+            }
+          }
+        }
+      } catch (error: unknown) {
+        if (isActive) {
+          const message = error instanceof Error ? error.message : String(error);
+          console.error('Unable to restore the saved login session.', error);
+          setAuthError(`Unable to verify your saved session. ${message}`);
+        }
+      } finally {
+        if (isActive) setIsAuthLoading(false);
+      }
+    };
+
+    void restoreSession();
+    return () => {
+      isActive = false;
+    };
+  }, []);
+
+  useEffect(() => {
+    let isActive = true;
+
     AsyncStorage.multiGet([
-      'rem_user',
       'rem_transactions',
       'rem_categories',
       'rem_recurring',
@@ -77,7 +128,6 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
           return value ? (JSON.parse(value) as T) : fallback;
         };
 
-        setCurrentUser(readStored('rem_user', INITIAL_USERS[0]));
         setTransactions(readStored('rem_transactions', INITIAL_TRANSACTIONS));
         setCategories(readStored('rem_categories', INITIAL_CATEGORIES));
         setRecurring(readStored('rem_recurring', INITIAL_RECURRING));
@@ -102,7 +152,6 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     if (!isHydrated || storageError) return;
 
     AsyncStorage.multiSet([
-      ['rem_user', JSON.stringify(currentUser)],
       ['rem_transactions', JSON.stringify(transactions)],
       ['rem_categories', JSON.stringify(categories)],
       ['rem_recurring', JSON.stringify(recurring)],
@@ -118,7 +167,6 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   }, [
     activityLogs,
     categories,
-    currentUser,
     isHydrated,
     recurring,
     storageError,
@@ -174,46 +222,6 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
-  const bulkDeleteTransactions = (ids: string[]) => {
-    setTransactions((prev) => prev.filter((t) => !ids.includes(t.id)));
-    addActivityLog({
-      user: currentUser.name,
-      email: currentUser.email,
-      action: 'Delete Transaction',
-      description: `Bulk deleted ${ids.length} transactions`,
-      ipAddress: '127.0.0.1',
-      details: { method: 'POST', url: '/api/v1/transactions/bulk-delete', status: '200 OK' },
-    });
-  };
-
-  const addCategory = (cat: Omit<Category, 'id'>) => {
-    const newCat: Category = {
-      ...cat,
-      id: `cat-${Date.now()}`,
-    };
-    setCategories((prev) => [newCat, ...prev]);
-    addActivityLog({
-      user: currentUser.name,
-      email: currentUser.email,
-      action: 'Create Category',
-      description: `Created category "${cat.name}" [${cat.type}]`,
-      ipAddress: '127.0.0.1',
-      details: { method: 'POST', url: '/api/v1/categories', payload: cat, status: '201 Created' },
-    });
-  };
-
-  const deleteCategory = (id: string) => {
-    setCategories((prev) => prev.filter((c) => c.id !== id));
-  };
-
-  const addRecurring = (rec: Omit<RecurringTransaction, 'id'>) => {
-    const newRec: RecurringTransaction = {
-      ...rec,
-      id: `rec-${Date.now()}`,
-    };
-    setRecurring((prev) => [newRec, ...prev]);
-  };
-
   const deleteRecurring = (id: string) => {
     setRecurring((prev) => prev.filter((r) => r.id !== id));
   };
@@ -235,6 +243,22 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       ipAddress: '127.0.0.1',
       details: { method: 'POST', url: '/api/v1/users', payload: { name, email }, status: '201 Created' },
     });
+  };
+
+  const signIn = async (email: string, password: string) => {
+    setAuthError(null);
+    const response = await apiLogin({ email, password });
+    setCurrentUser(toUserAccount(response.user));
+    setIsAuthenticated(true);
+  };
+
+  const signOut = async () => {
+    try {
+      await apiLogout();
+    } finally {
+      setIsAuthenticated(false);
+      setCurrentUser(INITIAL_USERS[0]);
+    }
   };
 
   if (!isHydrated) {
@@ -264,7 +288,11 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         activeTab,
         setActiveTab,
         currentUser,
-        setCurrentUser,
+        isAuthenticated,
+        isAuthLoading,
+        authError,
+        signIn,
+        signOut,
         transactions,
         categories,
         recurring,
@@ -272,17 +300,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         users,
         addTransaction,
         deleteTransaction,
-        bulkDeleteTransactions,
-        addCategory,
-        deleteCategory,
-        addRecurring,
         deleteRecurring,
         addUser,
-        addActivityLog,
-        isMobileSidebarOpen,
-        setIsMobileSidebarOpen,
-        viewMode,
-        setViewMode,
       }}
     >
       {children}

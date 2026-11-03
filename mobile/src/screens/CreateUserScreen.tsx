@@ -2,15 +2,16 @@ import React, { useState } from 'react';
 import {
   View,
   Text,
+  KeyboardAvoidingView,
+  Platform,
   ScrollView,
-  StyleSheet,
   TouchableOpacity,
   TextInput,
   Alert,
 } from 'react-native';
 import { UserPlus, CheckCircle, ShieldCheck } from 'lucide-react-native';
 import { useApp } from '../context/AppContext';
-import { RNCard } from '../components/NativeComponents';
+import { Card } from '../components/DisplayComponents';
 
 export default function CreateUserScreen() {
   const { addUser, users } = useApp();
@@ -38,233 +39,120 @@ export default function CreateUserScreen() {
     setTimeout(() => setSuccess(''), 4000);
   };
 
+  const inputClassName = 'rounded-lg border border-slate-300 bg-white px-3 py-[9px] text-[13px] text-slate-900';
+
   return (
-    <ScrollView className="flex-1 bg-slate-50" contentContainerStyle={styles.contentContainer}>
-      <View style={styles.header}>
-        <View style={styles.titleRow}>
-          <UserPlus size={20} color="#1e293b" />
-          <Text style={styles.titleText}>Create User</Text>
-        </View>
-        <Text style={styles.subtitleText}>
-          Create a standard user account. Authentication remains managed by Fortify.
-        </Text>
-      </View>
-
-      {success.length > 0 && (
-        <View style={styles.successBanner}>
-          <CheckCircle size={16} color="#059669" />
-          <Text style={styles.successText}>{success}</Text>
-        </View>
-      )}
-
-      {/* Form Card */}
-      <RNCard style={styles.formCard}>
-        <View style={styles.fieldGroup}>
-          <Text style={styles.label}>Name</Text>
-          <TextInput
-            value={name}
-            onChangeText={setName}
-            placeholder="Full Name"
-            placeholderTextColor="#94a3b8"
-            style={styles.input}
-          />
+    <KeyboardAvoidingView
+      className="flex-1 bg-slate-50"
+      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+    >
+      <ScrollView
+        className="flex-1 bg-slate-50"
+        keyboardShouldPersistTaps="handled"
+        keyboardDismissMode={Platform.OS === 'ios' ? 'interactive' : 'on-drag'}
+      >
+        <View className="gap-3.5 px-4 pb-9 pt-4">
+        <View className="gap-1">
+          <View className="flex-row items-center gap-2">
+            <UserPlus size={20} color="#1e293b" />
+            <Text className="text-xl font-extrabold text-slate-900">Create User</Text>
+          </View>
+          <Text className="text-xs text-slate-500">
+            Create a standard user account. Authentication remains managed by Fortify.
+          </Text>
         </View>
 
-        <View style={styles.fieldGroup}>
-          <Text style={styles.label}>Email</Text>
-          <TextInput
-            value={email}
-            onChangeText={setEmail}
-            placeholder="email@example.com"
-            placeholderTextColor="#94a3b8"
-            keyboardType="email-address"
-            style={styles.input}
-          />
-        </View>
+        {success.length > 0 && (
+          <View className="flex-row items-center gap-2 rounded-[10px] border border-emerald-200 bg-emerald-50 p-3">
+            <CheckCircle size={16} color="#059669" />
+            <Text className="text-xs font-semibold text-emerald-800">{success}</Text>
+          </View>
+        )}
 
-        <View style={styles.fieldGroup}>
-          <Text style={styles.label}>Password</Text>
-          <TextInput
-            value={password}
-            onChangeText={setPassword}
-            secureTextEntry
-            placeholder="••••••••"
-            placeholderTextColor="#94a3b8"
-            style={styles.input}
-          />
-        </View>
+        <Card className="gap-3.5 p-[18px]">
+          <View className="gap-1.5">
+            <Text className="text-xs font-semibold text-slate-700">Name</Text>
+            <TextInput
+              value={name}
+              onChangeText={setName}
+              placeholder="Full Name"
+              placeholderTextColor="#94a3b8"
+              className={inputClassName}
+            />
+          </View>
 
-        <View style={styles.fieldGroup}>
-          <Text style={styles.label}>Confirm password</Text>
-          <TextInput
-            value={confirmPassword}
-            onChangeText={setConfirmPassword}
-            secureTextEntry
-            placeholder="••••••••"
-            placeholderTextColor="#94a3b8"
-            style={styles.input}
-          />
-        </View>
+          <View className="gap-1.5">
+            <Text className="text-xs font-semibold text-slate-700">Email</Text>
+            <TextInput
+              value={email}
+              onChangeText={setEmail}
+              placeholder="email@example.com"
+              placeholderTextColor="#94a3b8"
+              keyboardType="email-address"
+              className={inputClassName}
+            />
+          </View>
 
-        <TouchableOpacity onPress={handleSubmit} style={styles.submitBtn}>
-          <Text style={styles.submitBtnText}>Create user</Text>
-        </TouchableOpacity>
-      </RNCard>
+          <View className="gap-1.5">
+            <Text className="text-xs font-semibold text-slate-700">Password</Text>
+            <TextInput
+              value={password}
+              onChangeText={setPassword}
+              secureTextEntry
+              placeholder="••••••••"
+              placeholderTextColor="#94a3b8"
+              className={inputClassName}
+            />
+          </View>
 
-      {/* Current Users */}
-      <RNCard style={styles.usersCard}>
-        <View style={styles.usersHeader}>
-          <ShieldCheck size={16} color="#2563eb" />
-          <Text style={styles.usersTitle}>Active Accounts</Text>
-        </View>
+          <View className="gap-1.5">
+            <Text className="text-xs font-semibold text-slate-700">Confirm password</Text>
+            <TextInput
+              value={confirmPassword}
+              onChangeText={setConfirmPassword}
+              secureTextEntry
+              placeholder="••••••••"
+              placeholderTextColor="#94a3b8"
+              className={inputClassName}
+            />
+          </View>
 
-        <View style={styles.usersList}>
-          {users.map((usr) => (
-            <View key={usr.id} style={styles.userRow}>
-              <View style={styles.userAvatar}>
-                <Text style={styles.avatarText}>{usr.name[0]}</Text>
+          <TouchableOpacity
+            onPress={handleSubmit}
+            className="mt-1.5 items-center rounded-lg bg-blue-700 py-[11px]"
+          >
+            <Text className="text-[13px] font-bold text-white">Create user</Text>
+          </TouchableOpacity>
+        </Card>
+
+        <Card className="gap-3 p-4">
+          <View className="flex-row items-center gap-1.5">
+            <ShieldCheck size={16} color="#2563eb" />
+            <Text className="text-[13px] font-bold text-slate-900">Active Accounts</Text>
+          </View>
+
+          <View className="gap-2.5">
+            {users.map((user) => (
+              <View
+                key={user.id}
+                className="flex-row items-center justify-between py-1.5"
+              >
+                <View className="h-[30px] w-[30px] items-center justify-center rounded-full bg-blue-100">
+                  <Text className="text-xs font-extrabold text-blue-700">{user.name[0]}</Text>
+                </View>
+                <View className="ml-2.5 flex-1">
+                  <Text className="text-xs font-bold text-slate-900">{user.name}</Text>
+                  <Text className="text-[10px] text-slate-500">{user.email}</Text>
+                </View>
+                <Text className="rounded-md bg-slate-100 px-2 py-[3px] text-[10px] font-semibold text-slate-600">
+                  {user.role}
+                </Text>
               </View>
-              <View style={styles.userInfo}>
-                <Text style={styles.userName}>{usr.name}</Text>
-                <Text style={styles.userEmail}>{usr.email}</Text>
-              </View>
-              <Text style={styles.roleBadge}>{usr.role}</Text>
-            </View>
-          ))}
+            ))}
+          </View>
+        </Card>
         </View>
-      </RNCard>
-    </ScrollView>
+      </ScrollView>
+    </KeyboardAvoidingView>
   );
 }
-
-const styles = StyleSheet.create({
-  contentContainer: {
-    padding: 16,
-    gap: 14,
-    paddingBottom: 36,
-  },
-  header: {
-    gap: 4,
-  },
-  titleRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  titleText: {
-    fontSize: 20,
-    fontWeight: '800',
-    color: '#0f172a',
-  },
-  subtitleText: {
-    fontSize: 12,
-    color: '#64748b',
-  },
-  successBanner: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    backgroundColor: '#ecfdf5',
-    borderWidth: 1,
-    borderColor: '#a7f3d0',
-    padding: 12,
-    borderRadius: 10,
-  },
-  successText: {
-    fontSize: 12,
-    color: '#065f46',
-    fontWeight: '600',
-  },
-  formCard: {
-    padding: 18,
-    gap: 14,
-  },
-  fieldGroup: {
-    gap: 6,
-  },
-  label: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: '#334155',
-  },
-  input: {
-    backgroundColor: '#ffffff',
-    borderWidth: 1,
-    borderColor: '#cbd5e1',
-    borderRadius: 8,
-    paddingHorizontal: 12,
-    paddingVertical: 9,
-    fontSize: 13,
-    color: '#0f172a',
-  },
-  submitBtn: {
-    backgroundColor: '#1a56db',
-    borderRadius: 8,
-    paddingVertical: 11,
-    alignItems: 'center',
-    marginTop: 6,
-  },
-  submitBtnText: {
-    color: '#ffffff',
-    fontSize: 13,
-    fontWeight: '700',
-  },
-  usersCard: {
-    padding: 16,
-    gap: 12,
-  },
-  usersHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-  },
-  usersTitle: {
-    fontSize: 13,
-    fontWeight: '700',
-    color: '#0f172a',
-  },
-  usersList: {
-    gap: 10,
-  },
-  userRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingVertical: 6,
-  },
-  userAvatar: {
-    width: 30,
-    height: 30,
-    borderRadius: 15,
-    backgroundColor: '#dbeafe',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  avatarText: {
-    fontSize: 12,
-    fontWeight: '800',
-    color: '#1d4ed8',
-  },
-  userInfo: {
-    flex: 1,
-    marginLeft: 10,
-  },
-  userName: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: '#0f172a',
-  },
-  userEmail: {
-    fontSize: 10,
-    color: '#64748b',
-  },
-  roleBadge: {
-    fontSize: 10,
-    color: '#475569',
-    backgroundColor: '#f1f5f9',
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 6,
-    fontWeight: '600',
-  },
-});

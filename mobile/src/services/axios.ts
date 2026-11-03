@@ -16,7 +16,8 @@ import {
 } from 'axios';
 import type { ApiFieldErrors } from './types';
 
-export const API_BASE_URL = 'http://localhost:8000';
+const API_BASE_URL =
+  process.env.EXPO_PUBLIC_API_BASE_URL ?? 'http://192.168.254.123:8000';
 
 const ACCESS_TOKEN_KEY = 'rem_access_token';
 const MAX_RETRIES = 2;
@@ -83,10 +84,13 @@ api.interceptors.response.use(
     if (error.response?.status === 422) {
       const data = error.response.data as ValidationErrorResponse | undefined;
       if (data?.errors) {
+        const messages = Object.values(data.errors).flat();
         return Promise.reject({
           status: 422,
           fieldErrors: data.errors,
-          message: 'Please fix the highlighted fields and try again.',
+          message: messages.length
+            ? messages.join(' ')
+            : 'Please fix the highlighted fields and try again.',
         });
       }
     }
@@ -94,5 +98,3 @@ api.interceptors.response.use(
     return Promise.reject(error);
   },
 );
-
-export default api;

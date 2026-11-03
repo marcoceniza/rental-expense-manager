@@ -1,15 +1,8 @@
 import React, { useState } from 'react';
-import {
-  View,
-  Text,
-  ScrollView,
-  StyleSheet,
-  TouchableOpacity,
-  TextInput,
-} from 'react-native';
+import { View, Text, ScrollView, TouchableOpacity, TextInput } from 'react-native';
 import { FileText, Search, ChevronDown, ChevronUp } from 'lucide-react-native';
 import { useApp } from '../context/AppContext';
-import { RNCard, RNBadge } from '../components/NativeComponents';
+import { Card, Badge } from '../components/DisplayComponents';
 
 export default function ActivityLogsScreen() {
   const { activityLogs } = useApp();
@@ -18,210 +11,96 @@ export default function ActivityLogsScreen() {
 
   const filtered = activityLogs.filter((log) => {
     if (searchTerm.trim()) {
-      const q = searchTerm.toLowerCase();
+      const query = searchTerm.toLowerCase();
       return (
-        log.description.toLowerCase().includes(q) ||
-        log.user.toLowerCase().includes(q) ||
-        log.action.toLowerCase().includes(q) ||
-        log.ipAddress.includes(q)
+        log.description.toLowerCase().includes(query) ||
+        log.user.toLowerCase().includes(query) ||
+        log.action.toLowerCase().includes(query) ||
+        log.ipAddress.includes(query)
       );
     }
     return true;
   });
 
   return (
-    <ScrollView className="flex-1 bg-slate-50" contentContainerStyle={styles.contentContainer}>
-      <View style={styles.header}>
-        <View style={styles.titleRow}>
-          <FileText size={20} color="#1e293b" />
-          <Text style={styles.titleText}>Activity Logs</Text>
+    <ScrollView
+      className="flex-1 bg-slate-50"
+      keyboardShouldPersistTaps="handled"
+      keyboardDismissMode="on-drag"
+    >
+      <View className="gap-3.5 px-4 pb-9 pt-4">
+        <View className="gap-1">
+          <View className="flex-row items-center gap-2">
+            <FileText size={20} color="#1e293b" />
+            <Text className="text-xl font-extrabold text-slate-900">Activity Logs</Text>
+          </View>
+          <Text className="text-xs text-slate-500">
+            Track all system activities including logins, transactions, and configuration changes.
+          </Text>
         </View>
-        <Text style={styles.subtitleText}>
-          Track all system activities including logins, transactions, and configuration changes.
-        </Text>
-      </View>
 
-      <View style={styles.searchBox}>
-        <Search size={16} color="#94a3b8" />
-        <TextInput
-          value={searchTerm}
-          onChangeText={setSearchTerm}
-          placeholder="Search logs..."
-          placeholderTextColor="#94a3b8"
-          style={styles.searchInput}
-        />
-      </View>
+        <View className="flex-row items-center gap-2 rounded-[10px] border border-slate-200 bg-white px-3 py-2">
+          <Search size={16} color="#94a3b8" />
+          <TextInput
+            value={searchTerm}
+            onChangeText={setSearchTerm}
+            placeholder="Search logs..."
+            placeholderTextColor="#94a3b8"
+            className="flex-1 text-[13px] text-slate-900"
+          />
+        </View>
 
-      <View style={styles.logsList}>
-        {filtered.map((item) => {
-          const isExp = expandedId === item.id;
-          return (
-            <RNCard key={item.id} style={styles.logCard}>
-              <View style={styles.logTop}>
-                <View style={styles.userCol}>
-                  <Text style={styles.userName}>{item.user}</Text>
-                  <Text style={styles.timestamp}>{item.timestamp}</Text>
-                </View>
-                <RNBadge label={item.action} type="SUCCESS" />
-              </View>
-
-              <Text style={styles.descText}>{item.description}</Text>
-
-              <View style={styles.logBottom}>
-                <View style={styles.ipTag}>
-                  <Text style={styles.ipText}>{item.ipAddress}</Text>
+        <View className="gap-2.5">
+          {filtered.map((item) => {
+            const isExpanded = expandedId === item.id;
+            return (
+              <Card key={item.id} className="gap-2 p-3.5">
+                <View className="flex-row items-center justify-between">
+                  <View className="gap-px">
+                    <Text className="text-[13px] font-bold text-slate-900">{item.user}</Text>
+                    <Text className="text-[10px] text-slate-400">{item.timestamp}</Text>
+                  </View>
+                  <Badge label={item.action} type="SUCCESS" />
                 </View>
 
-                <TouchableOpacity
-                  onPress={() => setExpandedId(isExp ? null : item.id)}
-                  style={styles.detailsBtn}
-                >
-                  <Text style={styles.detailsBtnText}>Details</Text>
-                  {isExp ? (
-                    <ChevronUp size={14} color="#2563eb" />
-                  ) : (
-                    <ChevronDown size={14} color="#2563eb" />
-                  )}
-                </TouchableOpacity>
-              </View>
+                <Text className="text-xs font-medium text-slate-700">{item.description}</Text>
 
-              {isExp && (
-                <View style={styles.detailsPanel}>
-                  <Text style={styles.detailsTitle}>HTTP Audit Event</Text>
-                  <Text style={styles.detailsLine}>User: {item.email}</Text>
-                  <Text style={styles.detailsLine}>Status: {item.details?.status || '200 OK'}</Text>
-                  {item.details?.userAgent && (
-                    <Text style={styles.detailsAgent} numberOfLines={2}>
-                      {item.details.userAgent}
+                <View className="flex-row items-center justify-between border-t border-slate-50 pt-1.5">
+                  <View className="rounded bg-slate-100 px-1.5 py-0.5">
+                    <Text className="font-mono text-[10px] text-slate-600">{item.ipAddress}</Text>
+                  </View>
+                  <TouchableOpacity
+                    onPress={() => setExpandedId(isExpanded ? null : item.id)}
+                    className="flex-row items-center gap-0.5"
+                  >
+                    <Text className="text-[11px] font-bold text-blue-700">Details</Text>
+                    {isExpanded ? (
+                      <ChevronUp size={14} color="#2563eb" />
+                    ) : (
+                      <ChevronDown size={14} color="#2563eb" />
+                    )}
+                  </TouchableOpacity>
+                </View>
+
+                {isExpanded && (
+                  <View className="mt-1.5 gap-[3px] rounded-lg bg-slate-50 p-2.5">
+                    <Text className="text-[11px] font-bold text-slate-900">HTTP Audit Event</Text>
+                    <Text className="text-[10px] text-slate-500">User: {item.email}</Text>
+                    <Text className="text-[10px] text-slate-500">
+                      Status: {item.details?.status || '200 OK'}
                     </Text>
-                  )}
-                </View>
-              )}
-            </RNCard>
-          );
-        })}
+                    {item.details?.userAgent && (
+                      <Text className="mt-0.5 font-mono text-[9px] text-slate-400" numberOfLines={2}>
+                        {item.details.userAgent}
+                      </Text>
+                    )}
+                  </View>
+                )}
+              </Card>
+            );
+          })}
+        </View>
       </View>
     </ScrollView>
   );
 }
-
-const styles = StyleSheet.create({
-  contentContainer: {
-    padding: 16,
-    gap: 14,
-    paddingBottom: 36,
-  },
-  header: {
-    gap: 4,
-  },
-  titleRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  titleText: {
-    fontSize: 20,
-    fontWeight: '800',
-    color: '#0f172a',
-  },
-  subtitleText: {
-    fontSize: 12,
-    color: '#64748b',
-  },
-  searchBox: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    backgroundColor: '#ffffff',
-    borderWidth: 1,
-    borderColor: '#e2e8f0',
-    borderRadius: 10,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-  },
-  searchInput: {
-    flex: 1,
-    fontSize: 13,
-    color: '#0f172a',
-  },
-  logsList: {
-    gap: 10,
-  },
-  logCard: {
-    padding: 14,
-    gap: 8,
-  },
-  logTop: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  userCol: {
-    gap: 1,
-  },
-  userName: {
-    fontSize: 13,
-    fontWeight: '700',
-    color: '#0f172a',
-  },
-  timestamp: {
-    fontSize: 10,
-    color: '#94a3b8',
-  },
-  descText: {
-    fontSize: 12,
-    color: '#334155',
-    fontWeight: '500',
-  },
-  logBottom: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingTop: 6,
-    borderTopWidth: 1,
-    borderTopColor: '#f8fafc',
-  },
-  ipTag: {
-    backgroundColor: '#f1f5f9',
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderRadius: 4,
-  },
-  ipText: {
-    fontSize: 10,
-    fontFamily: 'monospace',
-    color: '#475569',
-  },
-  detailsBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 2,
-  },
-  detailsBtnText: {
-    fontSize: 11,
-    fontWeight: '700',
-    color: '#1a56db',
-  },
-  detailsPanel: {
-    backgroundColor: '#f8fafc',
-    padding: 10,
-    borderRadius: 8,
-    marginTop: 6,
-    gap: 3,
-  },
-  detailsTitle: {
-    fontSize: 11,
-    fontWeight: '700',
-    color: '#0f172a',
-  },
-  detailsLine: {
-    fontSize: 10,
-    color: '#64748b',
-  },
-  detailsAgent: {
-    fontSize: 9,
-    color: '#94a3b8',
-    fontFamily: 'monospace',
-    marginTop: 2,
-  },
-});
