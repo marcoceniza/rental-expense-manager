@@ -69,6 +69,7 @@ abstract class ApiController extends Controller
             'is_recurring_generated' => $transaction->is_recurring_generated,
             'created_at' => $transaction->created_at->toIso8601String(),
             'updated_at' => $transaction->updated_at->toIso8601String(),
+            'deleted_at' => $transaction->deleted_at?->toIso8601String(),
             'category' => $transaction->category ? $this->formatCategory($transaction->category) : null,
             'user' => $transaction->user ? $this->formatUser($transaction->user) : null,
         ];

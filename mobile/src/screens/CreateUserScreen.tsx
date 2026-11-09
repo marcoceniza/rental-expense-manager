@@ -11,7 +11,7 @@ import {
 } from 'react-native';
 import { UserPlus, CheckCircle, ShieldCheck } from 'lucide-react-native';
 import { useApp } from '../context/AppContext';
-import { Card } from '../components/DisplayComponents';
+import { Card, EmptyState } from '../components/DisplayComponents';
 
 export default function CreateUserScreen() {
   const { addUser, users } = useApp();
@@ -22,24 +22,31 @@ export default function CreateUserScreen() {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [success, setSuccess] = useState('');
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     if (!name.trim() || !email.trim()) return;
-    if (password !== confirmPassword) {
-      Alert.alert('Invalid password', 'Passwords do not match.');
+    if (!password || password !== confirmPassword) {
+      Alert.alert('Invalid password', 'Enter a password and make sure both password fields match.');
       return;
     }
 
-    addUser(name.trim(), email.trim());
-    setSuccess(`User "${name}" created successfully.`);
-    setName('');
-    setEmail('');
-    setPassword('');
-    setConfirmPassword('');
+    try {
+      await addUser(name.trim(), email.trim(), password);
+      setSuccess(`User "${name}" created successfully.`);
+      setName('');
+      setEmail('');
+      setPassword('');
+      setConfirmPassword('');
 
-    setTimeout(() => setSuccess(''), 4000);
+      setTimeout(() => setSuccess(''), 4000);
+    } catch (error: unknown) {
+      Alert.alert(
+        'Unable to create user',
+        error instanceof Error ? error.message : 'Please try again.',
+      );
+    }
   };
 
-  const inputClassName = 'rounded-lg border border-slate-300 bg-white px-3 py-[9px] text-[13px] text-slate-900';
+  const inputClassName = 'rounded-lg border border-slate-300 bg-white px-3 py-[9px] text-[16px] text-slate-900';
 
   return (
     <KeyboardAvoidingView
@@ -75,6 +82,7 @@ export default function CreateUserScreen() {
             <TextInput
               value={name}
               onChangeText={setName}
+              autoCapitalize="none"
               placeholder="Full Name"
               placeholderTextColor="#94a3b8"
               className={inputClassName}
@@ -86,6 +94,7 @@ export default function CreateUserScreen() {
             <TextInput
               value={email}
               onChangeText={setEmail}
+              autoCapitalize="none"
               placeholder="email@example.com"
               placeholderTextColor="#94a3b8"
               keyboardType="email-address"
@@ -98,6 +107,7 @@ export default function CreateUserScreen() {
             <TextInput
               value={password}
               onChangeText={setPassword}
+              autoCapitalize="none"
               secureTextEntry
               placeholder="••••••••"
               placeholderTextColor="#94a3b8"
@@ -110,6 +120,7 @@ export default function CreateUserScreen() {
             <TextInput
               value={confirmPassword}
               onChangeText={setConfirmPassword}
+              autoCapitalize="none"
               secureTextEntry
               placeholder="••••••••"
               placeholderTextColor="#94a3b8"
@@ -121,18 +132,20 @@ export default function CreateUserScreen() {
             onPress={handleSubmit}
             className="mt-1.5 items-center rounded-lg bg-blue-700 py-[11px]"
           >
-            <Text className="text-[13px] font-bold text-white">Create user</Text>
+            <Text className="text-[16px] font-bold text-white">Create user</Text>
           </TouchableOpacity>
         </Card>
 
         <Card className="gap-3 p-4">
           <View className="flex-row items-center gap-1.5">
             <ShieldCheck size={16} color="#2563eb" />
-            <Text className="text-[13px] font-bold text-slate-900">Active Accounts</Text>
+            <Text className="text-[16px] font-bold text-slate-900">Active Accounts</Text>
           </View>
 
           <View className="gap-2.5">
-            {users.map((user) => (
+            {users.length === 0 ? (
+              <EmptyState message="No user accounts found." />
+            ) : users.map((user) => (
               <View
                 key={user.id}
                 className="flex-row items-center justify-between py-1.5"
@@ -142,9 +155,9 @@ export default function CreateUserScreen() {
                 </View>
                 <View className="ml-2.5 flex-1">
                   <Text className="text-xs font-bold text-slate-900">{user.name}</Text>
-                  <Text className="text-[10px] text-slate-500">{user.email}</Text>
+                  <Text className="text-[13px] text-slate-500">{user.email}</Text>
                 </View>
-                <Text className="rounded-md bg-slate-100 px-2 py-[3px] text-[10px] font-semibold text-slate-600">
+                <Text className="rounded-md bg-slate-100 px-2 py-[3px] text-[13px] font-semibold text-slate-600">
                   {user.role}
                 </Text>
               </View>

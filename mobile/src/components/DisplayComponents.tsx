@@ -15,6 +15,14 @@ export function Card({
   );
 }
 
+export function EmptyState({ message }: { message: string }) {
+  return (
+    <View className="items-center rounded-xl border border-dashed border-slate-300 bg-white px-4 py-6">
+      <Text className="text-center text-[13.5px] text-slate-400">{message}</Text>
+    </View>
+  );
+}
+
 const badgeVariants = {
   DEFAULT: { container: 'border-slate-200 bg-slate-100', label: 'text-slate-600' },
   INCOME: { container: 'border-blue-200 bg-blue-50', label: 'text-blue-600' },
@@ -33,7 +41,7 @@ export function Badge({
   return (
     <View className={`self-start rounded-xl border px-2 py-[3px] ${badgeVariants[type].container}`}>
       <Text
-        className={`text-[10px] font-bold tracking-[0.3px] ${badgeVariants[type].label}`}
+        className={`text-[13px] font-bold tracking-[0.3px] ${badgeVariants[type].label}`}
       >
         {label}
       </Text>
@@ -63,7 +71,7 @@ export function StatCard({
         {icon}
       </View>
       <View className="gap-0.5">
-        <Text className="text-[10px] font-bold uppercase tracking-[0.8px] text-slate-400">
+        <Text className="text-[13px] font-bold uppercase tracking-[0.8px] text-slate-400">
           {title}
         </Text>
         <Text className="text-xl font-extrabold text-slate-900">

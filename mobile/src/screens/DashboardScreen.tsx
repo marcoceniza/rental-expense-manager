@@ -17,22 +17,11 @@ import { formatCurrency } from '../utils/formatters';
 export default function DashboardScreen() {
   const { transactions, setActiveTab } = useApp();
 
-  const months = [
-    'January 2026',
-    'February 2026',
-    'March 2026',
-    'April 2026',
-    'May 2026',
-    'June 2026',
-    'July 2026',
-    'August 2026',
-    'September 2026',
-    'October 2026',
-    'November 2026',
-    'December 2026',
-  ];
-
-  const [currentMonthIndex, setCurrentMonthIndex] = useState(10);
+  const year = new Date().getFullYear();
+  const months = Array.from({ length: 12 }, (_, index) =>
+    `${new Date(year, index, 1).toLocaleString('en-US', { month: 'long' })} ${year}`,
+  );
+  const [currentMonthIndex, setCurrentMonthIndex] = useState(new Date().getMonth());
   const currentMonth = months[currentMonthIndex];
   const shortMonth = currentMonth.split(' ')[0].substring(0, 3);
   const monthTransactions = transactions.filter((transaction) =>
@@ -55,16 +44,16 @@ export default function DashboardScreen() {
         <View className="gap-1">
           <View className="flex-row items-center gap-2">
             <LayoutGrid size={20} color="#1e293b" />
-            <Text className="text-[22px] font-extrabold text-slate-900">Financial Overview</Text>
+            <Text className="text-[25px] font-extrabold text-slate-900">Financial Overview</Text>
           </View>
-          <Text className="text-[13px] text-slate-500">
+          <Text className="text-[16px] text-slate-500">
             Track your income and expenses efficiently.
           </Text>
 
           <View className="mt-2.5 flex-row flex-wrap items-center gap-2.5">
             <TouchableOpacity
               className="rounded-lg border border-slate-200 bg-white px-3 py-1.5"
-              onPress={() => setCurrentMonthIndex(10)}
+              onPress={() => setCurrentMonthIndex(new Date().getMonth())}
             >
               <Text className="text-xs font-semibold text-slate-700">This Month</Text>
             </TouchableOpacity>
@@ -114,36 +103,15 @@ export default function DashboardScreen() {
           />
         </View>
 
-        <View className="flex-row flex-wrap items-center gap-2">
-          <Text className="text-[11px] font-semibold text-slate-500">View populated data:</Text>
-          {[
-            { index: 8, label: 'Sep 2026 (Active)' },
-            { index: 10, label: 'Nov 2026 (Screenshot)' },
-          ].map(({ index, label }) => {
-            const isActive = currentMonthIndex === index;
-            return (
-              <TouchableOpacity
-                key={label}
-                onPress={() => setCurrentMonthIndex(index)}
-                className={`rounded-md border px-2.5 py-1 ${isActive ? 'border-blue-700 bg-blue-700' : 'border-slate-200 bg-white'}`}
-              >
-                <Text className={`text-[11px] font-medium ${isActive ? 'font-bold text-white' : 'text-slate-600'}`}>
-                  {label}
-                </Text>
-              </TouchableOpacity>
-            );
-          })}
-        </View>
-
         <View className="gap-4">
           <Card className="min-h-[260px] justify-between">
-            <Text className="text-[15px] font-bold text-slate-900">Monthly Overview</Text>
+            <Text className="text-[18px] font-bold text-slate-900">Monthly Overview</Text>
             <View className="items-center justify-center py-6">
               <View className="h-[140px] w-[140px] items-center justify-center rounded-full border-[10px] border-emerald-500 bg-white">
-                <Text className="text-center text-[13px] font-extrabold text-slate-900">
+                <Text className="text-center text-[16px] font-extrabold text-slate-900">
                   {formatCurrency(totalIncome + totalExpenses + totalLiabilities)}
                 </Text>
-                <Text className="text-[10px] text-slate-400">Total Volume</Text>
+                <Text className="text-[13px] text-slate-400">Total Volume</Text>
               </View>
             </View>
 
@@ -155,7 +123,7 @@ export default function DashboardScreen() {
               ].map(({ label, color }) => (
                 <View key={label} className="flex-row items-center gap-1.5">
                   <View className="h-2 w-2 rounded-full" style={{ backgroundColor: color }} />
-                  <Text className="text-[11px] text-slate-600">{label}</Text>
+                  <Text className="text-[14px] text-slate-600">{label}</Text>
                 </View>
               ))}
             </View>
@@ -163,7 +131,7 @@ export default function DashboardScreen() {
 
           <Card className="min-h-[260px]">
             <View className="mb-3 flex-row items-center justify-between">
-              <Text className="text-[15px] font-bold text-slate-900">Recent Activity</Text>
+              <Text className="text-[18px] font-bold text-slate-900">Recent Activity</Text>
               <TouchableOpacity
                 onPress={() => setActiveTab('transactions')}
                 className="flex-row items-center gap-1"
@@ -174,14 +142,14 @@ export default function DashboardScreen() {
             </View>
 
             <View className="mb-1.5 flex-row rounded-md bg-slate-50 px-2 py-2">
-              <Text className="text-[10px] font-bold tracking-[0.5px] text-slate-400" style={{ flex: 2 }}>DATE</Text>
-              <Text className="text-[10px] font-bold tracking-[0.5px] text-slate-400" style={{ flex: 3 }}>DESCRIPTION</Text>
-              <Text className="text-right text-[10px] font-bold tracking-[0.5px] text-slate-400" style={{ flex: 2 }}>AMOUNT</Text>
+              <Text className="text-[13px] font-bold tracking-[0.5px] text-slate-400" style={{ flex: 2 }}>DATE</Text>
+              <Text className="text-[13px] font-bold tracking-[0.5px] text-slate-400" style={{ flex: 3 }}>DESCRIPTION</Text>
+              <Text className="text-right text-[13px] font-bold tracking-[0.5px] text-slate-400" style={{ flex: 2 }}>AMOUNT</Text>
             </View>
 
             {monthTransactions.length === 0 ? (
               <View className="items-center py-10">
-                <Text className="text-xs italic text-slate-400">No transactions recorded yet.</Text>
+                <Text className="text-center text-xs italic text-slate-400">No transactions recorded yet.</Text>
               </View>
             ) : (
               <View className="gap-1.5">

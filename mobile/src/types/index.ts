@@ -3,6 +3,9 @@ export type TransactionType = 'INCOME' | 'EXPENSE' | 'LIABILITY';
 export interface Transaction {
   id: string;
   date: string; // YYYY-MM-DD or display formatted
+  transactionDate: string;
+  categoryId: string;
+  deletedAt?: string;
   description: string;
   subDescription?: string;
   category: string;
@@ -18,14 +21,18 @@ export interface Category {
   id: string;
   name: string;
   type: TransactionType;
+  isCharity?: boolean;
+  isOther?: boolean;
 }
 
 export interface RecurringTransaction {
   id: string;
   title: string;
+  categoryId: string;
   category: string;
   amount: number;
   frequency: 'monthly' | 'weekly' | 'yearly';
+  startDate: string;
 }
 
 export interface ActivityLog {
@@ -33,7 +40,7 @@ export interface ActivityLog {
   timestamp: string;
   user: string;
   email: string;
-  action: 'Login' | 'Create Transaction' | 'Update Transaction' | 'Delete Transaction' | 'Create Category' | 'Create User';
+  action: string;
   description: string;
   ipAddress: string;
   details?: {

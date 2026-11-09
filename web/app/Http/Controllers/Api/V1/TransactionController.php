@@ -44,6 +44,20 @@ class TransactionController extends ApiController
         ]);
     }
 
+    public function trash(): JsonResponse
+    {
+        $transactions = Transaction::onlyTrashed()
+            ->with(['category', 'user'])
+            ->orderByDesc('transaction_date')
+            ->orderByDesc('created_at')
+            ->paginate(15);
+
+        return response()->json([
+            'data' => $transactions->map(fn ($transaction) => $this->formatTransaction($transaction))->values()->all(),
+            'meta' => $this->paginate($transactions),
+        ]);
+    }
+
     public function store(StoreTransactionRequest $request): JsonResponse
     {
         $transaction = Transaction::create([

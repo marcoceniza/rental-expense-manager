@@ -1,20 +1,54 @@
-import React, { useState } from 'react';
-import { View, Text, ScrollView } from 'react-native';
+import React, { useEffect, useMemo, useState } from 'react';
+import { Alert, View, Text, ScrollView } from 'react-native';
 import { PieChart } from 'lucide-react-native';
-import { Card } from '../components/DisplayComponents';
+import { useApp } from '../context/AppContext';
+import { Card, EmptyState } from '../components/DisplayComponents';
 import { formatCurrency } from '../utils/formatters';
-import {
-  MONTHLY_BREAKDOWN_2026,
-  CATEGORY_REPORT_2026,
-} from '../data/initialData';
+import { getAnnualReport } from '../services/api';
 
 export default function ReportsScreen() {
-  const [selectedYear] = useState('2026');
+  const { transactions } = useApp();
+  const selectedYear = new Date().getFullYear();
+  const [report, setReport] = useState<Awaited<ReturnType<typeof getAnnualReport>> | null>(null);
 
-  const annualIncome = 784999.0;
-  const annualExpenses = 579354.35;
-  const annualLiabilities = 829322.0;
-  const netProfitLoss = -623677.35;
+  useEffect(() => {
+    let active = true;
+    getAnnualReport(selectedYear)
+      .then((result) => {
+        if (active) setReport(result);
+      })
+      .catch((error: unknown) => {
+        Alert.alert(
+          'Unable to load financial report',
+          error instanceof Error ? error.message : 'Please try again.',
+        );
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [selectedYear]);
+
+  const categoryTotals = useMemo(() => {
+    const totals = new Map<string, { type: string; amount: number }>();
+    transactions
+      .filter((transaction) => transaction.date.endsWith(String(selectedYear)))
+      .forEach((transaction) => {
+        const key = `${transaction.category}:${transaction.type}`;
+        const current = totals.get(key) ?? { type: transaction.type, amount: 0 };
+        current.amount += transaction.amount;
+        totals.set(key, current);
+      });
+    return Array.from(totals, ([key, value]) => ({
+      name: key.slice(0, key.lastIndexOf(':')),
+      ...value,
+    })).sort((a, b) => b.amount - a.amount);
+  }, [selectedYear, transactions]);
+
+  const annualIncome = Number(report?.totals.income ?? 0);
+  const annualExpenses = Number(report?.totals.expense ?? 0);
+  const annualLiabilities = Number(report?.totals.liability ?? 0);
+  const netProfitLoss = Number(report?.totals.net ?? 0);
 
   return (
     <ScrollView className="flex-1 bg-slate-50">
@@ -29,45 +63,49 @@ export default function ReportsScreen() {
 
         <View className="flex-row flex-wrap gap-2.5">
           <Card className="min-w-[150px] flex-1 p-3.5">
-            <Text className="text-[10px] font-bold tracking-[0.8px] text-slate-400">ANNUAL INCOME</Text>
+            <Text className="text-[13px] font-bold tracking-[0.8px] text-slate-400">ANNUAL INCOME</Text>
             <Text className="mt-1 text-lg font-extrabold text-green-600">{formatCurrency(annualIncome)}</Text>
           </Card>
           <Card className="min-w-[150px] flex-1 p-3.5">
-            <Text className="text-[10px] font-bold tracking-[0.8px] text-slate-400">ANNUAL EXPENSES</Text>
+            <Text className="text-[13px] font-bold tracking-[0.8px] text-slate-400">ANNUAL EXPENSES</Text>
             <Text className="mt-1 text-lg font-extrabold text-red-600">{formatCurrency(annualExpenses)}</Text>
           </Card>
           <Card className="min-w-[150px] flex-1 p-3.5">
-            <Text className="text-[10px] font-bold tracking-[0.8px] text-slate-400">ANNUAL LIABILITIES</Text>
+            <Text className="text-[13px] font-bold tracking-[0.8px] text-slate-400">ANNUAL LIABILITIES</Text>
             <Text className="mt-1 text-lg font-extrabold text-amber-600">{formatCurrency(annualLiabilities)}</Text>
           </Card>
           <Card className="min-w-[150px] flex-1 p-3.5">
-            <Text className="text-[10px] font-bold tracking-[0.8px] text-slate-400">NET PROFIT/LOSS</Text>
+            <Text className="text-[13px] font-bold tracking-[0.8px] text-slate-400">NET PROFIT/LOSS</Text>
             <Text className="mt-1 text-lg font-extrabold text-red-600">{formatCurrency(netProfitLoss)}</Text>
           </Card>
         </View>
 
         <Card className="gap-3 p-4">
-          <Text className="text-[15px] font-bold text-slate-900">
+          <Text className="text-[18px] font-bold text-slate-900">
             Monthly Breakdown ({selectedYear})
           </Text>
           <View className="gap-2.5">
-            {MONTHLY_BREAKDOWN_2026.map((row) => (
+            {!report ? (
+              <EmptyState message="No annual report data is available." />
+            ) : report.monthly.length === 0 ? (
+              <EmptyState message="No monthly report data is available for this year." />
+            ) : report.monthly.map((row) => (
               <View
                 key={row.month}
                 className="flex-row items-center justify-between border-b border-slate-100 py-2"
               >
                 <View className="gap-1">
-                  <Text className="text-[13px] font-bold text-slate-900">{row.month}</Text>
-                  <Text className={`text-[11px] font-bold ${row.net >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                    Net {formatCurrency(row.net)}
+                  <Text className="text-[16px] font-bold text-slate-900">{row.month}</Text>
+                  <Text className={`text-[14px] font-bold ${Number(row.net) >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                    Net {formatCurrency(Number(row.net))}
                   </Text>
                 </View>
                 <View className="items-end gap-0.5">
-                  <Text className="text-[11px] font-semibold text-green-600">+ {formatCurrency(row.income)}</Text>
-                  <Text className="text-[11px] font-semibold text-red-600">- {formatCurrency(row.expense)}</Text>
-                  {row.liability > 0 && (
-                    <Text className="text-[11px] font-semibold text-amber-600">
-                      L {formatCurrency(row.liability)}
+                  <Text className="text-[14px] font-semibold text-green-600">+ {formatCurrency(Number(row.income))}</Text>
+                  <Text className="text-[14px] font-semibold text-red-600">- {formatCurrency(Number(row.expense))}</Text>
+                  {Number(row.liability) > 0 && (
+                    <Text className="text-[14px] font-semibold text-amber-600">
+                      L {formatCurrency(Number(row.liability))}
                     </Text>
                   )}
                 </View>
@@ -77,9 +115,11 @@ export default function ReportsScreen() {
         </Card>
 
         <Card className="gap-3 p-4">
-          <Text className="text-[15px] font-bold text-slate-900">Category Report</Text>
+          <Text className="text-[18px] font-bold text-slate-900">Category Report</Text>
           <View className="gap-2">
-            {CATEGORY_REPORT_2026.map((category, index) => {
+            {categoryTotals.length === 0 ? (
+              <EmptyState message="No category transactions are available for this year." />
+            ) : categoryTotals.map((category) => {
               const color =
                 category.type === 'INCOME'
                   ? '#2563eb'
@@ -88,7 +128,7 @@ export default function ReportsScreen() {
                     : '#dc2626';
               return (
                 <View
-                  key={index}
+                  key={`${category.name}-${category.type}`}
                   className="flex-row items-center justify-between border-b border-slate-50 py-1.5"
                 >
                   <View className="mr-2.5 flex-1">
@@ -96,7 +136,7 @@ export default function ReportsScreen() {
                       {category.name}
                     </Text>
                     <Text
-                      className="mt-0.5 text-[9px] font-bold tracking-[0.5px]"
+                      className="mt-0.5 text-[12px] font-bold tracking-[0.5px]"
                       style={{ color }}
                     >
                       {category.type}

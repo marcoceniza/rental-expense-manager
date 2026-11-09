@@ -35,9 +35,9 @@ class CategoryController extends ApiController
 
     public function destroy(Request $request, Category $category): JsonResponse
     {
-        if ($category->transactions()->exists()) {
+        if ($category->transactions()->exists() || $category->recurringTransactions()->exists()) {
             return response()->json([
-                'message' => 'Category is in use and cannot be deleted.',
+                'message' => 'Category is in use by transactions or recurring transactions and cannot be deleted.',
             ], 409);
         }
 

@@ -1,8 +1,9 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
   KeyboardAvoidingView,
+  Keyboard,
   Platform,
   ScrollView,
   TextInput,
@@ -13,15 +14,32 @@ import {
 import { Redirect, useRouter } from 'expo-router';
 import { Eye, EyeOff, Mail, Lock } from 'lucide-react-native';
 import { isAxiosError } from 'axios';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useApp } from '@/context/AppContext';
 
 export default function LoginScreen() {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const { signIn, isAuthenticated, isAuthLoading, authError } = useApp();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [keyboardVisible, setKeyboardVisible] = useState(false);
+
+  useEffect(() => {
+    const showSubscription = Keyboard.addListener('keyboardDidShow', () => {
+      setKeyboardVisible(true);
+    });
+    const hideSubscription = Keyboard.addListener('keyboardDidHide', () => {
+      setKeyboardVisible(false);
+    });
+
+    return () => {
+      showSubscription.remove();
+      hideSubscription.remove();
+    };
+  }, []);
 
   const handleLogin = async () => {
     if (!email.trim() || !password.trim()) {
@@ -74,15 +92,16 @@ export default function LoginScreen() {
   return (
     <KeyboardAvoidingView
       className="flex-1 bg-[#0c1427]"
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
     >
       <ScrollView
         className="flex-1"
         contentContainerStyle={{
           flexGrow: 1,
-          justifyContent: 'center',
+          justifyContent: keyboardVisible ? 'flex-start' : 'center',
           paddingHorizontal: 24,
-          paddingVertical: 24,
+          paddingTop: keyboardVisible ? Math.max(100, insets.top + 16) : insets.top + 24,
+          paddingBottom: keyboardVisible ? 16 : insets.bottom + 24,
         }}
         keyboardShouldPersistTaps="handled"
         keyboardDismissMode={Platform.OS === 'ios' ? 'interactive' : 'on-drag'}
@@ -107,7 +126,7 @@ export default function LoginScreen() {
             <Mail size={18} color="#64748b" />
           </View>
           <TextInput
-            className="flex-1 py-3 text-[15px] text-slate-950"
+            className="flex-1 py-3 text-[18px] text-slate-950"
             placeholder="Email"
             placeholderTextColor="#94a3b8"
             value={email}
@@ -124,11 +143,12 @@ export default function LoginScreen() {
           </View>
           <View className="flex-1 flex-row items-center">
             <TextInput
-              className="flex-1 py-3 text-[15px] text-slate-950"
+              className="flex-1 py-3 text-[18px] text-slate-950"
               placeholder="Password"
               placeholderTextColor="#94a3b8"
               value={password}
               onChangeText={setPassword}
+              autoCapitalize="none"
               secureTextEntry={!showPassword}
               autoComplete="password"
             />

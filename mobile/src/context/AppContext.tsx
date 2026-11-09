@@ -1,6 +1,4 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import { ActivityIndicator, Alert, Text, View } from 'react-native';
+import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import {
   Transaction,
   Category,
@@ -10,66 +8,232 @@ import {
   NavTab,
 } from '../types';
 import {
-  INITIAL_CATEGORIES,
-  INITIAL_RECURRING,
-  INITIAL_TRANSACTIONS,
-  INITIAL_ACTIVITY_LOGS,
-  INITIAL_USERS,
-} from '../data/initialData';
-import {
+  createCategory as createCategoryRequest,
+  createRecurring as createRecurringRequest,
+  createTransaction as createTransactionRequest,
+  createUser as createUserRequest,
+  deleteCategory as deleteCategoryRequest,
+  deleteRecurring as deleteRecurringRequest,
+  deleteTransaction as deleteTransactionRequest,
+  getActivityLogs,
+  getCategories,
+  getCharityTransactions,
+  getOtherTransactions,
+  getRecurringTransactions,
+  getTransactions,
+  getTrashedTransactions,
+  getUsers,
   login as apiLogin,
   logout as apiLogout,
   me as apiMe,
+  permanentlyDeleteTransaction as permanentlyDeleteTransactionRequest,
+  restoreTransaction as restoreTransactionRequest,
+  updateCategory as updateCategoryRequest,
+  updateRecurring as updateRecurringRequest,
+  updateTransaction as updateTransactionRequest,
 } from '../services/api';
 import { clearAccessToken, getAccessToken } from '../services/axios';
-import type { ApiUser } from '../services/types';
+import type {
+  ApiCategory,
+  ApiLog,
+  ApiRecurring,
+  ApiTransaction,
+  ApiUser,
+  ApiUserAccount,
+} from '../services/types';
 import { isAxiosError } from 'axios';
 
 interface AppContextType {
   activeTab: NavTab;
   setActiveTab: (tab: NavTab) => void;
-  currentUser: UserAccount;
+  currentUser: UserAccount | null;
   isAuthenticated: boolean;
   isAuthLoading: boolean;
   authError: string | null;
   signIn: (email: string, password: string) => Promise<void>;
   signOut: () => Promise<void>;
   transactions: Transaction[];
+  trashedTransactions: Transaction[];
+  loadTrashedTransactions: () => Promise<void>;
+  restoreTransaction: (id: string) => Promise<void>;
+  permanentlyDeleteTransaction: (id: string) => Promise<void>;
   categories: Category[];
   recurring: RecurringTransaction[];
   activityLogs: ActivityLog[];
   users: UserAccount[];
-  addTransaction: (tx: Omit<Transaction, 'id' | 'addedBy'>) => void;
-  deleteTransaction: (id: string) => void;
-  deleteRecurring: (id: string) => void;
-  addUser: (name: string, email: string) => void;
+  addTransaction: (tx: {
+    category_id: number;
+    type: 'income' | 'expense' | 'liability';
+    amount: number;
+    transaction_date: string;
+    description: string;
+    remarks?: string;
+  }) => Promise<void>;
+  updateTransaction: (id: string, tx: Parameters<AppContextType['addTransaction']>[0]) => Promise<void>;
+  addCategory: (category: {
+    name: string;
+    type: 'income' | 'expense' | 'liability';
+    is_tuition: boolean;
+    is_other: boolean;
+  }) => Promise<void>;
+  updateCategory: (id: string, category: Parameters<AppContextType['addCategory']>[0]) => Promise<void>;
+  deleteCategory: (id: string) => Promise<void>;
+  addRecurring: (recurring: {
+    category_id: number;
+    amount: number;
+    frequency: 'monthly';
+    start_date: string;
+    description: string;
+  }) => Promise<void>;
+  updateRecurring: (id: string, recurring: Parameters<AppContextType['addRecurring']>[0]) => Promise<void>;
+  deleteTransaction: (id: string) => Promise<void>;
+  deleteRecurring: (id: string) => Promise<void>;
+  addUser: (name: string, email: string, password: string) => Promise<void>;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
 
-function toUserAccount(user: Pick<ApiUser, 'id' | 'name' | 'email' | 'user_type'>): UserAccount {
+function toUserAccount(
+  user: Pick<ApiUser, 'id' | 'name' | 'email' | 'user_type' | 'created_at'>,
+): UserAccount {
   return {
     id: String(user.id),
     name: user.name,
     email: user.email,
-    createdAt: new Date().toISOString().split('T')[0],
+    createdAt: user.created_at?.slice(0, 10) ?? '',
     role: user.user_type === 'admin' ? 'Admin' : 'Standard',
+  };
+}
+
+function formatTransactionDate(value: string): string {
+  const [year, month, day] = value.slice(0, 10).split('-').map(Number);
+  return new Date(year, month - 1, day).toLocaleDateString('en-US', {
+    month: 'short',
+    day: '2-digit',
+    year: 'numeric',
+  });
+}
+
+function toTransaction(transaction: ApiTransaction): Transaction {
+  const category = transaction.category;
+  return {
+    id: String(transaction.id),
+    date: formatTransactionDate(transaction.transaction_date),
+    transactionDate: transaction.transaction_date.slice(0, 10),
+    categoryId: String(transaction.category_id),
+    deletedAt: transaction.deleted_at ?? undefined,
+    description: transaction.description,
+    subDescription: transaction.remarks ?? undefined,
+    category: category?.name ?? 'Uncategorized',
+    amount: Number(transaction.amount),
+    type: transaction.type === 'income'
+      ? 'INCOME'
+      : transaction.type === 'expense'
+        ? 'EXPENSE'
+        : 'LIABILITY',
+    addedBy: transaction.user?.name ?? 'System',
+    isCharity: category?.is_tuition ?? false,
+    isOther: category?.is_other ?? false,
+  };
+}
+
+function toCategory(category: ApiCategory): Category {
+  return {
+    id: String(category.id),
+    name: category.name,
+    type: category.type === 'income'
+      ? 'INCOME'
+      : category.type === 'expense'
+        ? 'EXPENSE'
+        : 'LIABILITY',
+    isCharity: category.is_tuition,
+    isOther: category.is_other,
+  };
+}
+
+function toRecurring(recurring: ApiRecurring): RecurringTransaction {
+  return {
+    id: String(recurring.id),
+    title: recurring.description,
+    categoryId: String(recurring.category_id),
+    category: recurring.category?.name ?? 'Uncategorized',
+    amount: Number(recurring.amount),
+    frequency: recurring.frequency,
+    startDate: recurring.start_date.slice(0, 10),
+  };
+}
+
+function toActivityLog(log: ApiLog): ActivityLog {
+  return {
+    id: String(log.id),
+    timestamp: new Date(log.created_at).toLocaleString(),
+    user: log.user_name,
+    email: log.user_email ?? '',
+    action: log.action,
+    description: log.description ?? '',
+    ipAddress: log.ip_address ?? '',
+    details: {
+      userAgent: log.user_agent ?? undefined,
+      payload: log.payload ?? undefined,
+    },
   };
 }
 
 export function AppProvider({ children }: { children: React.ReactNode }) {
   const [activeTab, setActiveTab] = useState<NavTab>('dashboard');
-  const [currentUser, setCurrentUser] = useState<UserAccount>(INITIAL_USERS[0]);
+  const [currentUser, setCurrentUser] = useState<UserAccount | null>(null);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [isAuthLoading, setIsAuthLoading] = useState(true);
   const [authError, setAuthError] = useState<string | null>(null);
-  const [transactions, setTransactions] = useState<Transaction[]>(INITIAL_TRANSACTIONS);
-  const [categories, setCategories] = useState<Category[]>(INITIAL_CATEGORIES);
-  const [recurring, setRecurring] = useState<RecurringTransaction[]>(INITIAL_RECURRING);
-  const [activityLogs, setActivityLogs] = useState<ActivityLog[]>(INITIAL_ACTIVITY_LOGS);
-  const [users, setUsers] = useState<UserAccount[]>(INITIAL_USERS);
-  const [isHydrated, setIsHydrated] = useState(false);
-  const [storageError, setStorageError] = useState<string | null>(null);
+  const [transactions, setTransactions] = useState<Transaction[]>([]);
+  const [trashedTransactions, setTrashedTransactions] = useState<Transaction[]>([]);
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [recurring, setRecurring] = useState<RecurringTransaction[]>([]);
+  const [activityLogs, setActivityLogs] = useState<ActivityLog[]>([]);
+  const [users, setUsers] = useState<UserAccount[]>([]);
+
+  const loadRemoteData = useCallback(async (user: ApiUser) => {
+    const year = new Date().getFullYear();
+    let apiUsers: ApiUserAccount[] = [];
+    let apiLogs: ApiLog[] = [];
+    let apiTrashedTransactions: ApiTransaction[] = [];
+    const [apiCategories, standardTransactions, charityTransactions, otherTransactions, apiRecurring] =
+      await Promise.all([
+        getCategories(),
+        getTransactions(),
+        getCharityTransactions(year),
+        getOtherTransactions(year),
+        getRecurringTransactions(),
+      ]);
+    if (user.user_type === 'admin') {
+      [apiUsers, apiLogs, apiTrashedTransactions] = await Promise.all([
+        getUsers(),
+        getActivityLogs(),
+        getTrashedTransactions(),
+      ]);
+    }
+
+    const allTransactions = [
+      ...standardTransactions,
+      ...charityTransactions,
+      ...otherTransactions,
+    ];
+    const uniqueTransactions = Array.from(
+      new Map(allTransactions.map((transaction) => [transaction.id, transaction])).values(),
+    );
+
+    setCategories(apiCategories.map(toCategory));
+    setTransactions(uniqueTransactions
+      .sort((a, b) => b.transaction_date.localeCompare(a.transaction_date))
+      .map(toTransaction));
+    setTrashedTransactions(apiTrashedTransactions.map(toTransaction));
+    setRecurring(apiRecurring.map(toRecurring));
+    setUsers(apiUsers.map((apiUser) => ({
+      ...toUserAccount(apiUser),
+      createdAt: apiUser.created_at?.slice(0, 10) ?? '',
+    })));
+    setActivityLogs(apiLogs.map(toActivityLog));
+  }, []);
 
   useEffect(() => {
     let isActive = true;
@@ -81,6 +245,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
           try {
             const response = await apiMe();
             if (isActive) {
+              await loadRemoteData(response.user);
               setCurrentUser(toUserAccount(response.user));
               setIsAuthenticated(true);
             }
@@ -96,7 +261,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         if (isActive) {
           const message = error instanceof Error ? error.message : String(error);
           console.error('Unable to restore the saved login session.', error);
-          setAuthError(`Unable to verify your saved session. ${message}`);
+          setAuthError(`Unable to restore your session or load account data. ${message}`);
         }
       } finally {
         if (isActive) setIsAuthLoading(false);
@@ -107,149 +272,118 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     return () => {
       isActive = false;
     };
-  }, []);
+  }, [loadRemoteData]);
 
-  useEffect(() => {
-    let isActive = true;
-
-    AsyncStorage.multiGet([
-      'rem_transactions',
-      'rem_categories',
-      'rem_recurring',
-      'rem_logs',
-      'rem_users_list',
-    ])
-      .then((entries) => {
-        if (!isActive) return;
-
-        const storedValues = new Map(entries);
-        const readStored = <T,>(key: string, fallback: T): T => {
-          const value = storedValues.get(key);
-          return value ? (JSON.parse(value) as T) : fallback;
-        };
-
-        setTransactions(readStored('rem_transactions', INITIAL_TRANSACTIONS));
-        setCategories(readStored('rem_categories', INITIAL_CATEGORIES));
-        setRecurring(readStored('rem_recurring', INITIAL_RECURRING));
-        setActivityLogs(readStored('rem_logs', INITIAL_ACTIVITY_LOGS));
-        setUsers(readStored('rem_users_list', INITIAL_USERS));
-        setIsHydrated(true);
-      })
-      .catch((error: unknown) => {
-        if (!isActive) return;
-        const message = error instanceof Error ? error.message : String(error);
-        console.error('Unable to load saved rental data.', error);
-        setStorageError(message);
-        setIsHydrated(true);
-      });
-
-    return () => {
-      isActive = false;
-    };
-  }, []);
-
-  useEffect(() => {
-    if (!isHydrated || storageError) return;
-
-    AsyncStorage.multiSet([
-      ['rem_transactions', JSON.stringify(transactions)],
-      ['rem_categories', JSON.stringify(categories)],
-      ['rem_recurring', JSON.stringify(recurring)],
-      ['rem_logs', JSON.stringify(activityLogs)],
-      ['rem_users_list', JSON.stringify(users)],
-    ]).catch((error: unknown) => {
-      console.error('Unable to save rental data.', error);
-      Alert.alert(
-        'Unable to save changes',
-        error instanceof Error ? error.message : String(error),
-      );
-    });
-  }, [
-    activityLogs,
-    categories,
-    isHydrated,
-    recurring,
-    storageError,
-    transactions,
-    users,
-  ]);
-
-  const addActivityLog = (log: Omit<ActivityLog, 'id' | 'timestamp'>) => {
-    const now = new Date();
-    const formattedDate = now.toLocaleDateString('en-US', {
-      month: 'short',
-      day: '2-digit',
-      year: 'numeric',
-    });
-    const formattedTime = now.toTimeString().split(' ')[0];
-    const newLog: ActivityLog = {
-      ...log,
-      id: `log-${Date.now()}`,
-      timestamp: `${formattedDate} ${formattedTime}`,
-    };
-    setActivityLogs((prev) => [newLog, ...prev]);
+  const addTransaction = async (tx: Parameters<AppContextType['addTransaction']>[0]) => {
+    const created = await createTransactionRequest(tx);
+    setTransactions((prev) => [toTransaction(created), ...prev]);
   };
 
-  const addTransaction = (tx: Omit<Transaction, 'id' | 'addedBy'>) => {
-    const newTx: Transaction = {
-      ...tx,
-      id: `tx-${Date.now()}`,
-      addedBy: currentUser.name,
-    };
-    setTransactions((prev) => [newTx, ...prev]);
-    addActivityLog({
-      user: currentUser.name,
-      email: currentUser.email,
-      action: 'Create Transaction',
-      description: `Created transaction "${tx.description}" (${tx.type}) for ₱${tx.amount.toLocaleString()}`,
-      ipAddress: '127.0.0.1',
-      details: { method: 'POST', url: '/api/v1/transactions', payload: tx, status: '201 Created' },
-    });
+  const updateTransaction = async (id: string, tx: Parameters<AppContextType['addTransaction']>[0]) => {
+    const updated = await updateTransactionRequest(id, tx);
+    setTransactions((prev) => prev.map((transaction) =>
+      transaction.id === id ? toTransaction(updated) : transaction,
+    ));
   };
 
-  const deleteTransaction = (id: string) => {
-    const target = transactions.find((t) => t.id === id);
+  const loadTrashedTransactions = async () => {
+    const trashed = await getTrashedTransactions();
+    setTrashedTransactions(trashed.map(toTransaction));
+  };
+
+  const restoreTransaction = async (id: string) => {
+    const restored = await restoreTransactionRequest(id);
+    const mapped = toTransaction(restored);
+    setTrashedTransactions((prev) => prev.filter((transaction) => transaction.id !== id));
+    setTransactions((prev) => [mapped, ...prev.filter((transaction) => transaction.id !== id)]);
+  };
+
+  const permanentlyDeleteTransaction = async (id: string) => {
+    await permanentlyDeleteTransactionRequest(id);
+    setTrashedTransactions((prev) => prev.filter((transaction) => transaction.id !== id));
+  };
+
+  const addCategory = async (category: Parameters<AppContextType['addCategory']>[0]) => {
+    const created = await createCategoryRequest(category);
+    setCategories((prev) => [...prev, toCategory(created)]);
+  };
+
+  const updateCategory = async (id: string, category: Parameters<AppContextType['addCategory']>[0]) => {
+    const updated = await updateCategoryRequest(id, category);
+    setCategories((prev) => prev.map((item) => item.id === id ? toCategory(updated) : item));
+    setTransactions((prev) => prev.map((transaction) => transaction.categoryId === id
+      ? {
+          ...transaction,
+          category: updated.name,
+          isCharity: updated.is_tuition,
+          isOther: updated.is_other,
+        }
+      : transaction,
+    ));
+    setRecurring((prev) => prev.map((item) => item.categoryId === id
+        ? { ...item, category: updated.name }
+        : item,
+    ));
+  };
+
+  const deleteCategory = async (id: string) => {
+    await deleteCategoryRequest(id);
+    setCategories((prev) => prev.filter((item) => item.id !== id));
+  };
+
+  const addRecurring = async (item: Parameters<AppContextType['addRecurring']>[0]) => {
+    const created = await createRecurringRequest(item);
+    setRecurring((prev) => [toRecurring(created), ...prev]);
+  };
+
+  const updateRecurring = async (id: string, item: Parameters<AppContextType['addRecurring']>[0]) => {
+    const updated = await updateRecurringRequest(id, item);
+    setRecurring((prev) => prev.map((recurringItem) =>
+      recurringItem.id === id ? toRecurring(updated) : recurringItem,
+    ));
+  };
+
+  const deleteTransaction = async (id: string) => {
+    const deleted = transactions.find((transaction) => transaction.id === id);
+    await deleteTransactionRequest(id);
     setTransactions((prev) => prev.filter((t) => t.id !== id));
-    if (target) {
-      addActivityLog({
-        user: currentUser.name,
-        email: currentUser.email,
-        action: 'Delete Transaction',
-        description: `Deleted transaction "${target.description}"`,
-        ipAddress: '127.0.0.1',
-        details: { method: 'DELETE', url: `/api/v1/transactions/${id}`, status: '200 OK' },
-      });
+    if (deleted) {
+      setTrashedTransactions((prev) => [
+        { ...deleted, deletedAt: new Date().toISOString() },
+        ...prev.filter((transaction) => transaction.id !== id),
+      ]);
     }
   };
 
-  const deleteRecurring = (id: string) => {
+  const deleteRecurring = async (id: string) => {
+    await deleteRecurringRequest(id);
     setRecurring((prev) => prev.filter((r) => r.id !== id));
   };
 
-  const addUser = (name: string, email: string) => {
-    const newUser: UserAccount = {
-      id: `usr-${Date.now()}`,
+  const addUser = async (name: string, email: string, password: string) => {
+    const created = await createUserRequest({
       name,
       email,
-      createdAt: new Date().toISOString().split('T')[0],
-      role: 'Standard',
-    };
-    setUsers((prev) => [...prev, newUser]);
-    addActivityLog({
-      user: currentUser.name,
-      email: currentUser.email,
-      action: 'Create User',
-      description: `Created new standard user: ${name} (${email})`,
-      ipAddress: '127.0.0.1',
-      details: { method: 'POST', url: '/api/v1/users', payload: { name, email }, status: '201 Created' },
+      password,
+      password_confirmation: password,
     });
+    setUsers((prev) => [...prev, {
+      ...toUserAccount(created),
+      createdAt: created.created_at?.slice(0, 10) ?? '',
+    }]);
   };
 
   const signIn = async (email: string, password: string) => {
     setAuthError(null);
     const response = await apiLogin({ email, password });
-    setCurrentUser(toUserAccount(response.user));
-    setIsAuthenticated(true);
+    try {
+      await loadRemoteData(response.user);
+      setCurrentUser(toUserAccount(response.user));
+      setIsAuthenticated(true);
+    } catch (error: unknown) {
+      await clearAccessToken();
+      throw error;
+    }
   };
 
   const signOut = async () => {
@@ -257,30 +391,15 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       await apiLogout();
     } finally {
       setIsAuthenticated(false);
-      setCurrentUser(INITIAL_USERS[0]);
+      setCurrentUser(null);
+      setTransactions([]);
+      setTrashedTransactions([]);
+      setCategories([]);
+      setRecurring([]);
+      setActivityLogs([]);
+      setUsers([]);
     }
   };
-
-  if (!isHydrated) {
-    return (
-      <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', gap: 12 }}>
-        <ActivityIndicator />
-        <Text>Loading rental data...</Text>
-      </View>
-    );
-  }
-
-  if (storageError) {
-    return (
-      <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', padding: 24 }}>
-        <Text style={{ textAlign: 'center', color: '#b91c1c' }}>
-          Unable to load saved rental data. Restart the app or reinstall it if this continues.
-          {'\n\n'}
-          {storageError}
-        </Text>
-      </View>
-    );
-  }
 
   return (
     <AppContext.Provider
@@ -294,11 +413,21 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         signIn,
         signOut,
         transactions,
+        trashedTransactions,
+        loadTrashedTransactions,
+        restoreTransaction,
+        permanentlyDeleteTransaction,
         categories,
         recurring,
         activityLogs,
         users,
         addTransaction,
+        updateTransaction,
+        addCategory,
+        updateCategory,
+        deleteCategory,
+        addRecurring,
+        updateRecurring,
         deleteTransaction,
         deleteRecurring,
         addUser,
