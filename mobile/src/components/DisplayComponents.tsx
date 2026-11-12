@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text } from 'react-native';
+import { View, Text, type StyleProp, type ViewStyle } from 'react-native';
 
 export function Card({
   children,
@@ -34,13 +34,24 @@ const badgeVariants = {
 export function Badge({
   label,
   type = 'DEFAULT',
+  numberOfLines,
+  ellipsizeMode,
+  style,
 }: {
   label: string;
   type?: keyof typeof badgeVariants;
+  numberOfLines?: number;
+  ellipsizeMode?: 'head' | 'middle' | 'tail';
+  style?: StyleProp<ViewStyle>;
 }) {
   return (
-    <View className={`self-start rounded-xl border px-2 py-[3px] ${badgeVariants[type].container}`}>
+    <View
+      className={`self-start rounded-xl border px-2 py-[3px] ${badgeVariants[type].container}`}
+      style={style}
+    >
       <Text
+        numberOfLines={numberOfLines}
+        ellipsizeMode={ellipsizeMode}
         className={`text-[13px] font-bold tracking-[0.3px] ${badgeVariants[type].label}`}
       >
         {label}

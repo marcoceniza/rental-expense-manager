@@ -396,8 +396,8 @@ export default function TransactionsScreen() {
                   </View>
 
                   <View className="flex-row items-center justify-between border-t border-slate-50 pt-1">
-                    <Badge label={item.category} type={item.type} />
-                    <View className="flex-row items-center gap-2">
+                    <Badge label={item.category} type={item.type} numberOfLines={1} ellipsizeMode="tail" style={{ maxWidth: '60%' }} />
+                    <View className="flex-row items-center gap-2 flex-shrink-0">
                       <Text className="text-[14px] text-slate-500">{item.date}</Text>
                       <TouchableOpacity
                         onPress={() => setEditingTransaction(item)}
