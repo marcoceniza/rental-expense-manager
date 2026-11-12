@@ -14,8 +14,7 @@ import {
     TrendingUp,
     Wallet,
 } from 'lucide-vue-next';
-import { computed, ref } from 'vue';
-import VueApexCharts from 'vue3-apexcharts';
+import { computed, defineAsyncComponent, ref } from 'vue';
 import { dashboard as adminDashboard } from '@/routes/admin';
 import { index as adminTransactionsIndex } from '@/routes/admin/transactions';
 import {
@@ -27,7 +26,7 @@ defineOptions({
     layout: AppLayout,
     inheritAttrs: false,
     components: {
-        ApexCharts: VueApexCharts,
+        ApexCharts: defineAsyncComponent(() => import('vue3-apexcharts')),
     },
 });
 

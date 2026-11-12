@@ -134,7 +134,7 @@ const submit = () => {
                                 @click="showPassword = !showPassword"
                             >
                                 <svg
-                                    class="h-5 w-5 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
+                                    class="h-5 w-5 text-slate-400 hover:text-slate-600 dark:hover:text-slate-600"
                                     fill="none"
                                     stroke="currentColor"
                                     viewBox="0 0 24 24"

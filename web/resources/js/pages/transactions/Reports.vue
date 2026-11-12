@@ -4,8 +4,6 @@ import AppLayout from '@/layouts/AppLayout.vue';
 import type { AnnualReport, CategorySummary, SharedData } from '@/types';
 import { Head, router, usePage } from '@inertiajs/vue3';
 import { format } from 'date-fns';
-import jsPDF from 'jspdf';
-import autoTable from 'jspdf-autotable';
 
 import {
     BarChart3,
@@ -14,8 +12,7 @@ import {
     FileDown,
     PieChart,
 } from 'lucide-vue-next';
-import { computed, ref } from 'vue';
-import VueApexCharts from 'vue3-apexcharts';
+import { computed, defineAsyncComponent, ref } from 'vue';
 import { reports as adminReports } from '@/routes/admin';
 import { reports as userReports } from '@/routes/user';
 
@@ -23,7 +20,7 @@ defineOptions({
     layout: AppLayout,
     inheritAttrs: false,
     components: {
-        ApexCharts: VueApexCharts,
+        ApexCharts: defineAsyncComponent(() => import('vue3-apexcharts')),
     },
 });
 
@@ -113,6 +110,10 @@ const pdfCurrency = (value: number) => {
 };
 
 const exportPDF = async () => {
+    const [{ default: jsPDF }, { default: autoTable }] = await Promise.all([
+        import('jspdf'),
+        import('jspdf-autotable'),
+    ]);
     const doc = new jsPDF();
     const year = currentYear.value;
 
