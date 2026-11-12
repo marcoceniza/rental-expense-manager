@@ -31,6 +31,7 @@ export interface ApiCategory {
   type: ApiTransactionType;
   is_tuition: boolean;
   is_other: boolean;
+  transactions_count?: number;
 }
 
 export interface ApiTransaction {
@@ -85,6 +86,15 @@ export interface ApiAnnualReport {
     liability: number | string;
     net: number | string;
   };
+}
+
+export interface ApiCategorySummary {
+  categoryReport: {
+    name: string;
+    type: string;
+    total: number;
+  }[];
+  year: number;
 }
 
 export interface ApiLog {

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
   View,
   Text,
@@ -21,6 +21,7 @@ import {
   Trash2,
   Search,
   X,
+  User,
 } from 'lucide-react-native';
 import { useApp } from '../context/AppContext';
 import { Card, Badge, EmptyState } from '../components/DisplayComponents';
@@ -31,6 +32,9 @@ import { Transaction, TransactionType } from '../types';
 export default function TransactionsScreen() {
   const {
     transactions,
+    transactionsLastPage,
+    loadMoreTransactions,
+    resetTransactions,
     trashedTransactions,
     loadTrashedTransactions,
     restoreTransaction,
@@ -40,6 +44,10 @@ export default function TransactionsScreen() {
     categories,
     currentUser,
   } = useApp();
+
+  React.useEffect(() => {
+    void resetTransactions();
+  }, [resetTransactions]);
 
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedType, setSelectedType] = useState<string>('All');
@@ -67,29 +75,38 @@ export default function TransactionsScreen() {
     ),
   ];
 
-  const filtered = transactions.filter((transaction) => {
-    if (transaction.isCharity || transaction.isOther) return false;
-    if (selectedType !== 'All' && transaction.type !== selectedType.toUpperCase()) return false;
-    if (selectedMonth !== 'All' && !transaction.date.includes(selectedMonth.split(' ')[0])) return false;
-    if (searchTerm.trim()) {
-      const query = searchTerm.toLowerCase();
-      return (
-        transaction.description.toLowerCase().includes(query) ||
-        transaction.category.toLowerCase().includes(query) ||
-        transaction.subDescription?.toLowerCase().includes(query)
-      );
+  const { filtered, incomeTotal, expenseTotal, liabilityTotal } = useMemo(() => {
+    const filtered: Transaction[] = [];
+    let incomeTotal = 0;
+    let expenseTotal = 0;
+    let liabilityTotal = 0;
+
+    for (const transaction of transactions) {
+      if (transaction.isCharity || transaction.isOther) continue;
+      if (selectedType !== 'All' && transaction.type !== selectedType.toUpperCase()) continue;
+      if (selectedMonth !== 'All' && !transaction.date.includes(selectedMonth.split(' ')[0])) continue;
+      if (searchTerm.trim()) {
+        const query = searchTerm.toLowerCase();
+        const matches =
+          transaction.description.toLowerCase().includes(query) ||
+          transaction.category.toLowerCase().includes(query) ||
+          transaction.subDescription?.toLowerCase().includes(query);
+        if (!matches) continue;
+      }
+
+      filtered.push(transaction);
+
+      if (transaction.type === 'INCOME') {
+        incomeTotal += transaction.amount;
+      } else if (transaction.type === 'EXPENSE') {
+        expenseTotal += transaction.amount;
+      } else if (transaction.type === 'LIABILITY') {
+        liabilityTotal += transaction.amount;
+      }
     }
-    return true;
-  });
-  const incomeTotal = filtered
-    .filter((transaction) => transaction.type === 'INCOME')
-    .reduce((sum, transaction) => sum + transaction.amount, 0);
-  const expenseTotal = filtered
-    .filter((transaction) => transaction.type === 'EXPENSE')
-    .reduce((sum, transaction) => sum + transaction.amount, 0);
-  const liabilityTotal = filtered
-    .filter((transaction) => transaction.type === 'LIABILITY')
-    .reduce((sum, transaction) => sum + transaction.amount, 0);
+
+    return { filtered, incomeTotal, expenseTotal, liabilityTotal };
+  }, [transactions, selectedType, selectedMonth, searchTerm]);
 
   const handleCreate = async () => {
     const numericAmount = parseFloat(amount);
@@ -364,10 +381,14 @@ export default function TransactionsScreen() {
                 <Card key={item.id} className="gap-2 p-3.5">
                   <View className="flex-row items-start justify-between">
                     <View className="mr-3 flex-1">
-                      <Text className="text-sm font-bold text-slate-900">{item.description}</Text>
+                      <Text className="text-sm font-bold text-slate-900" numberOfLines={1}>{item.description}</Text>
                       {item.subDescription && (
                         <Text className="mt-px text-[14px] text-slate-400">{item.subDescription}</Text>
                       )}
+                      <View className="mt-1 flex-row items-center gap-1.5">
+                        <User size={11} color="#94a3b8" />
+                        <Text className="text-[11px] text-slate-500">{item.addedBy}</Text>
+                      </View>
                     </View>
                     <Text className="text-[18px] font-extrabold" style={{ color: amountColor }}>
                       {formatCurrency(item.amount, { showPlusSign: isIncome, isNegative: !isIncome })}
@@ -399,6 +420,16 @@ export default function TransactionsScreen() {
                 </Card>
               );
             })}
+
+            {transactionsLastPage > 1 && (
+              <TouchableOpacity
+                onPress={() => loadMoreTransactions()}
+                className="mt-3 items-center rounded-lg bg-blue-600 px-4 py-3"
+                activeOpacity={0.8}
+              >
+                <Text className="text-[14px] font-bold text-white">Load More</Text>
+              </TouchableOpacity>
+            )}
           </View>
         </View>
       </ScrollView>

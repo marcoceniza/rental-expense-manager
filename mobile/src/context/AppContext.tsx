@@ -19,8 +19,8 @@ import {
   getCategories,
   getCharityTransactions,
   getOtherTransactions,
+  getPaginatedTransactions,
   getRecurringTransactions,
-  getTransactions,
   getTrashedTransactions,
   getUsers,
   login as apiLogin,
@@ -53,6 +53,7 @@ interface AppContextType {
   signIn: (email: string, password: string) => Promise<void>;
   signOut: () => Promise<void>;
   transactions: Transaction[];
+  transactionsLastPage: number;
   trashedTransactions: Transaction[];
   loadTrashedTransactions: () => Promise<void>;
   restoreTransaction: (id: string) => Promise<void>;
@@ -70,6 +71,8 @@ interface AppContextType {
     remarks?: string;
   }) => Promise<void>;
   updateTransaction: (id: string, tx: Parameters<AppContextType['addTransaction']>[0]) => Promise<void>;
+  loadMoreTransactions: () => Promise<void>;
+  resetTransactions: () => Promise<void>;
   addCategory: (category: {
     name: string;
     type: 'income' | 'expense' | 'liability';
@@ -148,6 +151,7 @@ function toCategory(category: ApiCategory): Category {
         : 'LIABILITY',
     isCharity: category.is_tuition,
     isOther: category.is_other,
+    transactionsCount: category.transactions_count ?? 0,
   };
 }
 
@@ -186,6 +190,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const [isAuthLoading, setIsAuthLoading] = useState(true);
   const [authError, setAuthError] = useState<string | null>(null);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
+  const [transactionsPage, setTransactionsPage] = useState(1);
+  const [transactionsLastPage, setTransactionsLastPage] = useState(1);
   const [trashedTransactions, setTrashedTransactions] = useState<Transaction[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [recurring, setRecurring] = useState<RecurringTransaction[]>([]);
@@ -197,10 +203,10 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     let apiUsers: ApiUserAccount[] = [];
     let apiLogs: ApiLog[] = [];
     let apiTrashedTransactions: ApiTransaction[] = [];
-    const [apiCategories, standardTransactions, charityTransactions, otherTransactions, apiRecurring] =
+    const [apiCategories, paginated, charityTransactions, otherTransactions, apiRecurring] =
       await Promise.all([
         getCategories(),
-        getTransactions(),
+        getPaginatedTransactions(1),
         getCharityTransactions(year),
         getOtherTransactions(year),
         getRecurringTransactions(),
@@ -214,7 +220,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     }
 
     const allTransactions = [
-      ...standardTransactions,
+      ...paginated.data,
       ...charityTransactions,
       ...otherTransactions,
     ];
@@ -223,6 +229,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     );
 
     setCategories(apiCategories.map(toCategory));
+    setTransactionsLastPage(paginated.last_page);
+    setTransactionsPage(1);
     setTransactions(uniqueTransactions
       .sort((a, b) => b.transaction_date.localeCompare(a.transaction_date))
       .map(toTransaction));
@@ -233,6 +241,24 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       createdAt: apiUser.created_at?.slice(0, 10) ?? '',
     })));
     setActivityLogs(apiLogs.map(toActivityLog));
+  }, []);
+
+  const loadMoreTransactions = useCallback(async () => {
+    const nextPage = transactionsPage + 1;
+    if (nextPage > transactionsLastPage) return;
+
+    const { data: newItems, last_page: totalLastPage } = await getPaginatedTransactions(nextPage);
+    const mapped = newItems.map(toTransaction);
+    setTransactions((prev) => [...prev, ...mapped]);
+    setTransactionsPage(nextPage);
+    setTransactionsLastPage(totalLastPage);
+  }, [transactionsPage, transactionsLastPage]);
+
+  const resetTransactions = useCallback(async () => {
+    const { data: newItems, last_page: totalLastPage } = await getPaginatedTransactions(1);
+    setTransactions(newItems.map(toTransaction));
+    setTransactionsPage(1);
+    setTransactionsLastPage(totalLastPage);
   }, []);
 
   useEffect(() => {
@@ -421,6 +447,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         recurring,
         activityLogs,
         users,
+        transactionsLastPage,
+        loadMoreTransactions,
+        resetTransactions,
         addTransaction,
         updateTransaction,
         addCategory,

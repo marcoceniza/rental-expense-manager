@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
-import { Alert, View, Text, ScrollView, TouchableOpacity } from 'react-native';
-import { LayoutGrid, Pencil, Trash2 } from 'lucide-react-native';
+import React, { useState, useMemo } from 'react';
+import { Alert, View, Text, ScrollView, TouchableOpacity, Modal, TextInput } from 'react-native';
+import { LayoutGrid, Pencil, Trash2, ChevronLeft, ChevronRight, User } from 'lucide-react-native';
 import { useApp } from '../context/AppContext';
 import { Card, Badge, EmptyState } from '../components/DisplayComponents';
 import EditTransactionModal from '../components/EditTransactionModal';
@@ -8,11 +8,23 @@ import { formatCurrency } from '../utils/formatters';
 import type { Transaction } from '../types';
 
 export default function OthersScreen() {
-  const { transactions, deleteTransaction } = useApp();
+  const { transactions, deleteTransaction, currentUser } = useApp();
   const [editingTransaction, setEditingTransaction] = useState<Transaction | null>(null);
+  const [selectedYear, setSelectedYear] = useState<number>(new Date().getFullYear());
+  const [showYearPicker, setShowYearPicker] = useState(false);
 
-  const othersList = transactions.filter((transaction) => transaction.isOther);
-  const total = othersList.reduce((sum, transaction) => sum + transaction.amount, 0);
+  const years = useMemo(() => {
+    const currentYear = new Date().getFullYear();
+    const yearList = [];
+    for (let y = 2024; y <= currentYear + 3; y++) yearList.push(y);
+    return yearList;
+  }, []);
+
+  const othersList = useMemo(() => {
+    return transactions.filter((t) => t.isOther && t.date.endsWith(String(selectedYear)));
+  }, [transactions, selectedYear]);
+
+  const total = useMemo(() => othersList.reduce((sum, t) => sum + t.amount, 0), [othersList]);
   const handleDelete = async (id: string) => {
     try {
       await deleteTransaction(id);
@@ -32,12 +44,33 @@ export default function OthersScreen() {
     <>
     <ScrollView className="flex-1 bg-slate-50">
       <View className="gap-3.5 px-4 pb-9 pt-4">
-        <View className="gap-1">
-          <View className="flex-row items-center gap-2">
-            <LayoutGrid size={20} color="#1e293b" />
-            <Text className="text-xl font-extrabold text-slate-900">Others</Text>
+        <View className="flex-row items-center justify-between">
+          <View className="gap-1">
+            <View className="flex-row items-center gap-2">
+              <LayoutGrid size={20} color="#1e293b" />
+              <Text className="text-xl font-extrabold text-slate-900">Others</Text>
+            </View>
+            <Text className="text-xs text-slate-500">Monitor all transactions related to others.</Text>
           </View>
-          <Text className="text-xs text-slate-500">Monitor all transactions related to others.</Text>
+
+          {/* Year navigation */}
+          <View className="flex-row items-center gap-2">
+            <TouchableOpacity onPress={() => selectedYear > 2024 && setSelectedYear(selectedYear - 1)}>
+              <ChevronLeft size={20} color={selectedYear > 2024 ? '#475569' : '#cbd5e1'} />
+            </TouchableOpacity>
+            <TouchableOpacity
+              onPress={() => setShowYearPicker(!showYearPicker)}
+              className="rounded-lg border border-slate-200 bg-white px-3 py-1.5"
+            >
+              <Text className="text-[14px] font-bold text-slate-700">{selectedYear}</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              onPress={() => setSelectedYear(selectedYear + 1)}
+              disabled={selectedYear >= new Date().getFullYear()}
+            >
+              <ChevronRight size={20} color={selectedYear < new Date().getFullYear() ? '#475569' : '#cbd5e1'} />
+            </TouchableOpacity>
+          </View>
         </View>
 
         <Card className="gap-1 border-l-4 border-l-emerald-500 p-4">
@@ -47,7 +80,7 @@ export default function OthersScreen() {
           <Text className="mt-0.5 text-[25px] font-black text-green-600">
             {formatCurrency(total, { showPlusSign: true })}
           </Text>
-          <Text className="text-[14px] text-slate-500">Year {new Date().getFullYear()}</Text>
+          <Text className="text-[14px] text-slate-500">Year {selectedYear}</Text>
         </Card>
 
         <View className="gap-2.5">
@@ -60,7 +93,13 @@ export default function OthersScreen() {
           ) : othersList.map((item) => (
             <Card key={item.id} className="gap-2 p-3.5">
               <View className="flex-row items-center justify-between">
-                <Text className="text-sm font-bold text-slate-900">{item.description}</Text>
+                <View className="flex-1">
+                  <Text className="text-sm font-bold text-slate-900" numberOfLines={1}>{item.description}</Text>
+                  <View className="mt-1 flex-row items-center gap-1.5">
+                    <User size={12} color="#94a3b8" />
+                    <Text className="text-[12px] text-slate-500">{item.addedBy}</Text>
+                  </View>
+                </View>
                 <Text className="text-sm font-extrabold text-green-600">
                   {formatCurrency(item.amount, { showPlusSign: true })}
                 </Text>

@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Alert, View, Text, ScrollView, TouchableOpacity } from 'react-native';
-import { Heart, Pencil, Trash2 } from 'lucide-react-native';
+import { Heart, Pencil, Trash2, User } from 'lucide-react-native';
 import { useApp } from '../context/AppContext';
 import { Card, Badge, EmptyState } from '../components/DisplayComponents';
 import EditTransactionModal from '../components/EditTransactionModal';
@@ -63,10 +63,14 @@ export default function CharityScreen() {
             <Card key={item.id} className="gap-2 p-3.5">
               <View className="flex-row items-start justify-between">
                 <View className="mr-2.5 flex-1">
-                  <Text className="text-sm font-bold text-slate-900">{item.description}</Text>
+                  <Text className="text-sm font-bold text-slate-900" numberOfLines={1}>{item.description}</Text>
                   {item.subDescription && (
                     <Text className="mt-px text-[14px] text-slate-400">{item.subDescription}</Text>
                   )}
+                  <View className="mt-1 flex-row items-center gap-1.5">
+                    <User size={12} color="#94a3b8" />
+                    <Text className="text-[12px] text-slate-500">{item.addedBy}</Text>
+                  </View>
                 </View>
                 <Text className="text-sm font-extrabold text-red-600">
                   {formatCurrency(item.amount, { isNegative: true })}

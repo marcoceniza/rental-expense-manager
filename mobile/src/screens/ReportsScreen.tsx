@@ -1,23 +1,54 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Alert, View, Text, ScrollView } from 'react-native';
-import { PieChart } from 'lucide-react-native';
+import { Alert, View, Text, ScrollView, TouchableOpacity } from 'react-native';
+import { ChevronDown, ChevronUp, FileDown, FileSpreadsheet, PieChart, BarChart3 } from 'lucide-react-native';
 import { useApp } from '../context/AppContext';
 import { Card, EmptyState } from '../components/DisplayComponents';
 import { formatCurrency } from '../utils/formatters';
-import { getAnnualReport } from '../services/api';
+import { getAnnualReport, getCategorySummary } from '../services/api';
 
 export default function ReportsScreen() {
-  const { transactions } = useApp();
-  const selectedYear = new Date().getFullYear();
-  const [report, setReport] = useState<Awaited<ReturnType<typeof getAnnualReport>> | null>(null);
+  const { currentUser } = useApp();
+  const [selectedYear, setSelectedYear] = useState<number>(new Date().getFullYear());
+  const [report, setReport] = useState<{ monthly: { month: string; income: number; expense: number; liability: number; net: number }[]; totals: { income: number; expense: number; liability: number; net: number } } | null>(null);
+  const [categorySummary, setCategorySummary] = useState<{ name: string; type: string; total: number }[]>([]);
+  const [isYearPickerOpen, setIsYearPickerOpen] = useState(false);
+  const [loading, setLoading] = useState(true);
+
+  const years = [2024, 2025, 2026, 2027];
+
+  const normalizeReport = (data: { monthly: { month: string; income: number | string; expense: number | string; liability: number | string; net: number | string }[]; totals: { income: number | string; expense: number | string; liability: number | string; net: number | string } }) => ({
+    monthly: data.monthly.map((m) => ({
+      month: m.month,
+      income: Number(m.income),
+      expense: Number(m.expense),
+      liability: Number(m.liability),
+      net: Number(m.net),
+    })),
+    totals: {
+      income: Number(data.totals.income),
+      expense: Number(data.totals.expense),
+      liability: Number(data.totals.liability),
+      net: Number(data.totals.net),
+    },
+  });
 
   useEffect(() => {
     let active = true;
-    getAnnualReport(selectedYear)
-      .then((result) => {
-        if (active) setReport(result);
+    setLoading(true);
+
+    Promise.all([
+      getAnnualReport(selectedYear),
+      getCategorySummary(selectedYear),
+    ])
+      .then(([annualReportData, catSummaryData]) => {
+        if (!active) return;
+        setReport(normalizeReport(annualReportData));
+        setCategorySummary(catSummaryData.categoryReport || []);
+        setLoading(false);
       })
       .catch((error: unknown) => {
+        if (!active) return;
+        setLoading(false);
         Alert.alert(
           'Unable to load financial report',
           error instanceof Error ? error.message : 'Please try again.',
@@ -29,38 +60,110 @@ export default function ReportsScreen() {
     };
   }, [selectedYear]);
 
-  const categoryTotals = useMemo(() => {
-    const totals = new Map<string, { type: string; amount: number }>();
-    transactions
-      .filter((transaction) => transaction.date.endsWith(String(selectedYear)))
-      .forEach((transaction) => {
-        const key = `${transaction.category}:${transaction.type}`;
-        const current = totals.get(key) ?? { type: transaction.type, amount: 0 };
-        current.amount += transaction.amount;
-        totals.set(key, current);
-      });
-    return Array.from(totals, ([key, value]) => ({
-      name: key.slice(0, key.lastIndexOf(':')),
-      ...value,
-    })).sort((a, b) => b.amount - a.amount);
-  }, [selectedYear, transactions]);
+  const maxAmount = useMemo(() => {
+    const monthly = report?.monthly || [];
+    let max = 0;
+    monthly.forEach((row) => {
+      if (row.income > max) max = row.income;
+      if (row.expense > max) max = row.expense;
+      if (row.liability > max) max = row.liability;
+    });
+    return max || 1;
+  }, [report]);
 
   const annualIncome = Number(report?.totals.income ?? 0);
   const annualExpenses = Number(report?.totals.expense ?? 0);
   const annualLiabilities = Number(report?.totals.liability ?? 0);
   const netProfitLoss = Number(report?.totals.net ?? 0);
 
+  const handleExport = () => {
+    const lines = [
+      'RENTAL EXPENSE MANAGER',
+      `Annual Financial Report - ${selectedYear}`,
+      `Generated: ${new Date().toLocaleDateString()}`,
+      '',
+      'MONTHLY BREAKDOWN',
+      '─────────────────────────────',
+      'Month\t\tIncome\t\tExpense\t\tLiability\tNet',
+      ...(report?.monthly.map((m) =>
+        `${m.month}\t${formatCurrency(Number(m.income))}\t${formatCurrency(Number(m.expense))}\t${formatCurrency(Number(m.liability))}\t${formatCurrency(Number(m.net))}`,
+      ) || []),
+      '',
+      '─────────────────────────────',
+      'TOTALS',
+      `Income:\t\t\t${formatCurrency(report?.totals.income || 0)}`,
+      `Expense:\t\t\t${formatCurrency(report?.totals.expense || 0)}`,
+      `Liability:\t\t\t${formatCurrency(report?.totals.liability || 0)}`,
+      `Net:\t\t\t\t${formatCurrency(report?.totals.net || 0)}`,
+      '',
+      'CATEGORY SUMMARY',
+      '─────────────────────────────',
+      ...categorySummary.map((c) => `${c.name} (${c.type}):\t${formatCurrency(c.total)}`),
+    ];
+
+    const text = lines.join('\n');
+    Alert.alert(
+      'Export Report',
+      `Financial Report for ${selectedYear} generated.\n\nIn a full implementation, this would open a share dialog to save as PDF or share via email.\n\nFor now, copy this text to save the report.`,
+      [{ text: 'OK' }],
+    );
+  };
+
+  const isBarVisible = !!(report?.monthly && report.monthly.length > 0);
+
   return (
     <ScrollView className="flex-1 bg-slate-50">
       <View className="gap-4 px-4 pb-9 pt-4">
-        <View className="gap-1">
-          <View className="flex-row items-center gap-2">
-            <PieChart size={20} color="#1e293b" />
-            <Text className="text-xl font-extrabold text-slate-900">Financial Reports</Text>
+        {/* Header with year selector and export */}
+        <View className="flex-row items-center justify-between">
+          <View className="gap-1">
+            <View className="flex-row items-center gap-2">
+              <FileSpreadsheet size={20} color="#1e293b" />
+              <Text className="text-xl font-extrabold text-slate-900">Financial Reports</Text>
+            </View>
+            <Text className="text-xs text-slate-500">Analyze your annual performance.</Text>
           </View>
-          <Text className="text-xs text-slate-500">Analyze your annual performance.</Text>
+
+          <View className="flex-row items-center gap-2">
+            {/* Year selector dropdown */}
+            <View className="relative">
+              <TouchableOpacity
+                onPress={() => setIsYearPickerOpen(!isYearPickerOpen)}
+                className="flex-row items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-2"
+              >
+                <Text className="text-[14px] font-bold text-slate-700">{selectedYear}</Text>
+                {isYearPickerOpen ? <ChevronUp size={14} color="#94a3b8" /> : <ChevronDown size={14} color="#94a3b8" />}
+              </TouchableOpacity>
+
+              {isYearPickerOpen && (
+                <View className="absolute right-0 top-full mt-1 min-w-[120px] overflow-hidden rounded-lg border border-slate-200 bg-white shadow-lg z-50">
+                  {years.map((y) => (
+                    <TouchableOpacity
+                      key={y}
+                      onPress={() => { setSelectedYear(y); setIsYearPickerOpen(false); }}
+                      className={`px-3 py-2 ${y === selectedYear ? 'bg-blue-50' : ''}`}
+                    >
+                      <Text className={`text-[14px] font-semibold ${y === selectedYear ? 'text-blue-700' : 'text-slate-700'}`}>{y}</Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              )}
+            </View>
+
+            {/* Export PDF button (admin only) */}
+            {currentUser?.role === 'Admin' && (
+              <TouchableOpacity
+                onPress={handleExport}
+                className="flex-row items-center gap-1.5 rounded-lg bg-slate-900 px-3 py-2"
+              >
+                <FileDown size={14} color="#ffffff" />
+                <Text className="text-[14px] font-bold text-white">Export PDF</Text>
+              </TouchableOpacity>
+            )}
+          </View>
         </View>
 
+        {/* Annual Stats Cards */}
         <View className="flex-row flex-wrap gap-2.5">
           <Card className="min-w-[150px] flex-1 p-3.5">
             <Text className="text-[13px] font-bold tracking-[0.8px] text-slate-400">ANNUAL INCOME</Text>
@@ -76,79 +179,187 @@ export default function ReportsScreen() {
           </Card>
           <Card className="min-w-[150px] flex-1 p-3.5">
             <Text className="text-[13px] font-bold tracking-[0.8px] text-slate-400">NET PROFIT/LOSS</Text>
-            <Text className="mt-1 text-lg font-extrabold text-red-600">{formatCurrency(netProfitLoss)}</Text>
+            <Text className={`mt-1 text-lg font-extrabold ${netProfitLoss >= 0 ? 'text-blue-600' : 'text-red-600'}`}>
+              {formatCurrency(netProfitLoss)}
+            </Text>
           </Card>
         </View>
 
+        {/* Monthly Breakdown Table */}
         <Card className="gap-3 p-4">
-          <Text className="text-[18px] font-bold text-slate-900">
-            Monthly Breakdown ({selectedYear})
-          </Text>
-          <View className="gap-2.5">
-            {!report ? (
-              <EmptyState message="No annual report data is available." />
-            ) : report.monthly.length === 0 ? (
-              <EmptyState message="No monthly report data is available for this year." />
-            ) : report.monthly.map((row) => (
-              <View
-                key={row.month}
-                className="flex-row items-center justify-between border-b border-slate-100 py-2"
-              >
-                <View className="gap-1">
-                  <Text className="text-[16px] font-bold text-slate-900">{row.month}</Text>
-                  <Text className={`text-[14px] font-bold ${Number(row.net) >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                    Net {formatCurrency(Number(row.net))}
+          <View className="flex-row items-center gap-2">
+            <BarChart3 size={18} color="#2563eb" />
+            <Text className="text-[18px] font-bold text-slate-900">Monthly Breakdown</Text>
+          </View>
+
+          {!isBarVisible ? (
+            <EmptyState message="No data available for this year." />
+          ) : (
+            <View className="gap-0">
+              {/* Header row */}
+              <View className="flex-row items-center border-b border-slate-200 py-2">
+                <Text className="flex-1 text-[12px] font-bold uppercase text-slate-400">Month</Text>
+                <Text className="w-20 text-right text-[12px] font-bold uppercase text-emerald-600">Income</Text>
+                <Text className="w-20 text-right text-[12px] font-bold uppercase text-red-600">Expense</Text>
+                <Text className="w-20 text-right text-[12px] font-bold uppercase text-amber-600">Liability</Text>
+                <Text className="w-24 text-right text-[12px] font-bold uppercase text-slate-400">Net</Text>
+              </View>
+
+              {report?.monthly.map((row) => (
+                <View key={row.month} className="flex-row items-center border-b border-slate-50 py-2">
+                  <Text className="flex-1 text-[14px] font-bold text-slate-700">{row.month}</Text>
+                  <Text className="w-20 text-right text-[13px] font-semibold text-emerald-600">
+                    {formatCurrency(Number(row.income))}
+                  </Text>
+                  <Text className="w-20 text-right text-[13px] font-semibold text-red-600">
+                    {formatCurrency(Number(row.expense))}
+                  </Text>
+                  <Text className="w-20 text-right text-[13px] font-semibold text-amber-600">
+                    {formatCurrency(Number(row.liability))}
+                  </Text>
+                  <Text className={`w-24 text-right text-[13px] font-bold ${Number(row.net) >= 0 ? 'text-slate-900' : 'text-red-600'}`}>
+                    {formatCurrency(Number(row.net))}
                   </Text>
                 </View>
-                <View className="items-end gap-0.5">
-                  <Text className="text-[14px] font-semibold text-green-600">+ {formatCurrency(Number(row.income))}</Text>
-                  <Text className="text-[14px] font-semibold text-red-600">- {formatCurrency(Number(row.expense))}</Text>
-                  {Number(row.liability) > 0 && (
-                    <Text className="text-[14px] font-semibold text-amber-600">
-                      L {formatCurrency(Number(row.liability))}
-                    </Text>
-                  )}
-                </View>
+              ))}
+
+              {/* Totals row */}
+              <View className="flex-row items-center border-t-2 border-slate-200 bg-slate-50 py-2">
+                <Text className="flex-1 text-[13px] font-bold uppercase text-slate-600">TOTALS</Text>
+                <Text className="w-20 text-right text-[13px] font-bold text-emerald-600">
+                  {formatCurrency(report.totals.income)}
+                </Text>
+                <Text className="w-20 text-right text-[13px] font-bold text-red-600">
+                  {formatCurrency(report.totals.expense)}
+                </Text>
+                <Text className="w-20 text-right text-[13px] font-bold text-amber-600">
+                  {formatCurrency(report.totals.liability)}
+                </Text>
+                <Text className={`w-24 text-right text-[13px] font-bold ${report.totals.net >= 0 ? 'text-slate-900' : 'text-red-600'}`}>
+                  {formatCurrency(report.totals.net)}
+                </Text>
               </View>
-            ))}
-          </View>
+            </View>
+          )}
         </Card>
 
+        {/* Annual Summary Bar Chart */}
+        {isBarVisible && (
+          <Card className="gap-3 p-4">
+            <View className="flex-row items-center gap-2">
+              <BarChart3 size={18} color="#2563eb" />
+              <Text className="text-[18px] font-bold text-slate-900">Annual Summary</Text>
+            </View>
+
+            <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+              <View className="flex-row items-end gap-2 pb-2">
+                {report?.monthly.map((m) => {
+                  const incomeH = maxAmount > 0 ? (Number(m.income) / maxAmount) * 150 : 0;
+                  const expenseH = maxAmount > 0 ? (Number(m.expense) / maxAmount) * 150 : 0;
+                  const liabilityH = maxAmount > 0 ? (Number(m.liability) / maxAmount) * 150 : 0;
+
+                  return (
+                    <View key={m.month} className="items-center" style={{ width: 32 }}>
+                      {/* Income bar */}
+                      <View
+                        style={{
+                          width: 8,
+                          height: Math.max(incomeH, 2),
+                          backgroundColor: '#10b981',
+                          borderRadius: 2,
+                        }}
+                      />
+                      {/* Expense bar */}
+                      <View
+                        style={{
+                          width: 8,
+                          height: Math.max(expenseH, 2),
+                          backgroundColor: '#ef4444',
+                          borderRadius: 2,
+                          marginTop: 1,
+                        }}
+                      />
+                      {/* Liability bar */}
+                      <View
+                        style={{
+                          width: 8,
+                          height: Math.max(liabilityH, 2),
+                          backgroundColor: '#f59e0b',
+                          borderRadius: 2,
+                          marginTop: 1,
+                        }}
+                      />
+                      <Text className="mt-1 text-[9px] text-slate-400" numberOfLines={1}>
+                        {m.month.substring(0, 3)}
+                      </Text>
+                    </View>
+                  );
+                })}
+              </View>
+            </ScrollView>
+
+            {/* Chart Legend */}
+            <View className="flex-row justify-center gap-4 border-t border-slate-100 pt-3">
+              <View className="flex-row items-center gap-1.5">
+                <View className="h-2.5 w-2.5 rounded-sm bg-emerald-500" />
+                <Text className="text-[13px] text-slate-600">Income</Text>
+              </View>
+              <View className="flex-row items-center gap-1.5">
+                <View className="h-2.5 w-2.5 rounded-sm bg-red-500" />
+                <Text className="text-[13px] text-slate-600">Expense</Text>
+              </View>
+              <View className="flex-row items-center gap-1.5">
+                <View className="h-2.5 w-2.5 rounded-sm bg-amber-500" />
+                <Text className="text-[13px] text-slate-600">Liability</Text>
+              </View>
+            </View>
+          </Card>
+        )}
+
+        {/* Category Report (from server API) */}
         <Card className="gap-3 p-4">
-          <Text className="text-[18px] font-bold text-slate-900">Category Report</Text>
-          <View className="gap-2">
-            {categoryTotals.length === 0 ? (
-              <EmptyState message="No category transactions are available for this year." />
-            ) : categoryTotals.map((category) => {
-              const color =
-                category.type === 'INCOME'
-                  ? '#2563eb'
-                  : category.type === 'LIABILITY'
-                    ? '#d97706'
-                    : '#dc2626';
-              return (
-                <View
-                  key={`${category.name}-${category.type}`}
-                  className="flex-row items-center justify-between border-b border-slate-50 py-1.5"
-                >
-                  <View className="mr-2.5 flex-1">
-                    <Text className="text-xs font-semibold text-slate-900" numberOfLines={1}>
-                      {category.name}
-                    </Text>
-                    <Text
-                      className="mt-0.5 text-[12px] font-bold tracking-[0.5px]"
-                      style={{ color }}
-                    >
-                      {category.type}
+          <View className="flex-row items-center gap-2">
+            <PieChart size={18} color="#2563eb" />
+            <Text className="text-[18px] font-bold text-slate-900">Category Report</Text>
+          </View>
+
+          {categorySummary.length === 0 ? (
+            <EmptyState message="No category data available for this year." />
+          ) : (
+            <View className="gap-2.5">
+              {categorySummary.map((category) => {
+                const color =
+                  category.type === 'INCOME' || category.type === 'income'
+                    ? '#2563eb'
+                    : category.type === 'LIABILITY' || category.type === 'liability'
+                      ? '#d97706'
+                      : '#dc2626';
+                const normalizedType = category.type.charAt(0).toUpperCase() + category.type.slice(1).toLowerCase();
+
+                return (
+                  <View
+                    key={category.name}
+                    className="flex-row items-center justify-between border-b border-slate-50 py-1.5"
+                  >
+                    <View className="mr-2.5 flex-1">
+                      <Text className="text-[14px] font-bold text-slate-900" numberOfLines={1}>
+                        {category.name}
+                      </Text>
+                      <Text
+                        className="mt-0.5 text-[12px] font-bold tracking-[0.5px]"
+                        style={{ color }}
+                      >
+                        {normalizedType}
+                      </Text>
+                    </View>
+                    <Text className="text-[14px] font-bold text-slate-900">
+                      {formatCurrency(Number(category.total))}
                     </Text>
                   </View>
-                  <Text className="text-xs font-bold text-slate-900">
-                    {formatCurrency(category.amount)}
-                  </Text>
-                </View>
-              );
-            })}
-          </View>
+                );
+              })}
+            </View>
+          )}
         </Card>
       </View>
     </ScrollView>

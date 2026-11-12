@@ -9,13 +9,16 @@ import {
   ChevronLeft,
   ChevronRight,
   ArrowRight,
+  User,
 } from 'lucide-react-native';
 import { useApp } from '../context/AppContext';
 import { StatCard, Card } from '../components/DisplayComponents';
 import { formatCurrency } from '../utils/formatters';
 
 export default function DashboardScreen() {
-  const { transactions, setActiveTab } = useApp();
+  const { transactions, setActiveTab, currentUser } = useApp();
+
+  const isAdmin = currentUser?.role === 'Admin';
 
   const year = new Date().getFullYear();
   const months = Array.from({ length: 12 }, (_, index) =>
@@ -142,8 +145,11 @@ export default function DashboardScreen() {
             </View>
 
             <View className="mb-1.5 flex-row rounded-md bg-slate-50 px-2 py-2">
-              <Text className="text-[13px] font-bold tracking-[0.5px] text-slate-400" style={{ flex: 2 }}>DATE</Text>
-              <Text className="text-[13px] font-bold tracking-[0.5px] text-slate-400" style={{ flex: 3 }}>DESCRIPTION</Text>
+              <Text className="text-[13px] font-bold tracking-[0.5px] text-slate-400" style={{ flex: 1.5 }}>DATE</Text>
+              <Text className="text-[13px] font-bold tracking-[0.5px] text-slate-400" style={{ flex: 2.5 }}>DESCRIPTION</Text>
+              {isAdmin && (
+                <Text className="text-[13px] font-bold tracking-[0.5px] text-slate-400" style={{ flex: 1.5 }}>CATEGORY</Text>
+              )}
               <Text className="text-right text-[13px] font-bold tracking-[0.5px] text-slate-400" style={{ flex: 2 }}>AMOUNT</Text>
             </View>
 
@@ -165,12 +171,17 @@ export default function DashboardScreen() {
                       key={transaction.id}
                       className="flex-row items-center border-b border-slate-100 px-2 py-2.5"
                     >
-                      <Text className="text-xs text-slate-500" style={{ flex: 2 }}>
+                      <Text className="text-xs text-slate-500" style={{ flex: 1.5 }} numberOfLines={1}>
                         {transaction.date}
                       </Text>
-                      <Text className="text-xs font-semibold text-slate-800" style={{ flex: 3 }} numberOfLines={1}>
+                      <Text className="text-xs font-semibold text-slate-800" style={{ flex: 2.5 }} numberOfLines={1}>
                         {transaction.description}
                       </Text>
+                      {isAdmin && (
+                        <Text className="text-[12px] text-slate-500" style={{ flex: 1.5 }} numberOfLines={1}>
+                          {transaction.category}
+                        </Text>
+                      )}
                       <Text
                         className="text-right text-xs font-bold"
                         style={{ flex: 2, color: amountColor }}

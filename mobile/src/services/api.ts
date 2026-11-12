@@ -3,6 +3,7 @@ import type {
   ApiAnnualReport,
   ApiCategory,
   ApiCollection,
+  ApiCategorySummary,
   ApiLog,
   ApiRecurring,
   ApiReportTransactionCollection,
@@ -39,31 +40,56 @@ export async function me(): Promise<MeResponse> {
 }
 
 async function getAllPages<T>(url: string): Promise<T[]> {
-  const firstPage = (await api.get<ApiCollection<T>>(url)).data;
+  const { data: firstPage } = await api.get<ApiCollection<T>>(url);
   const results = [...firstPage.data];
 
+  if (firstPage.meta.last_page <= 1) return results;
+
+  const pagePromises = [];
   for (let page = 2; page <= firstPage.meta.last_page; page += 1) {
-    const response = await api.get<ApiCollection<T>>(url, { params: { page } });
-    results.push(...response.data.data);
+    pagePromises.push(api.get<ApiCollection<T>>(url, { params: { page } }));
   }
+
+  const responses = await Promise.all(pagePromises);
+  responses.forEach(res => {
+    results.push(...res.data.data);
+  });
 
   return results;
 }
 
 async function getReportPages(url: string): Promise<ApiTransaction[]> {
-  const firstPage = (await api.get<ApiReportTransactionCollection>(url)).data;
+  const { data: firstPage } = await api.get<ApiReportTransactionCollection>(url);
   const results = [...firstPage.transactions];
 
+  if (firstPage.meta.last_page <= 1) return results;
+
+  const pagePromises = [];
   for (let page = 2; page <= firstPage.meta.last_page; page += 1) {
-    const response = await api.get<ApiReportTransactionCollection>(url, { params: { page } });
-    results.push(...response.data.transactions);
+    pagePromises.push(api.get<ApiReportTransactionCollection>(url, { params: { page } }));
   }
+
+  const responses = await Promise.all(pagePromises);
+  responses.forEach(res => {
+    results.push(...res.data.transactions);
+  });
 
   return results;
 }
 
 export async function getCategories(): Promise<ApiCategory[]> {
   return (await api.get<{ data: ApiCategory[] }>('/api/v1/categories')).data.data;
+}
+
+export async function getPaginatedTransactions(page: number = 1): Promise<{
+  data: ApiTransaction[];
+  last_page: number;
+}> {
+  const res = await api.get<ApiCollection<ApiTransaction>>(
+    '/api/v1/transactions',
+    { params: { page } },
+  );
+  return { data: res.data.data, last_page: res.data.meta.last_page };
 }
 
 export function getTransactions(): Promise<ApiTransaction[]> {
@@ -104,6 +130,10 @@ export async function getActivityLogs(): Promise<ApiLog[]> {
 
 export async function getAnnualReport(year: number): Promise<ApiAnnualReport> {
   return (await api.get<ApiAnnualReport>('/api/v1/reports/annual', { params: { year } })).data;
+}
+
+export async function getCategorySummary(year: number): Promise<ApiCategorySummary> {
+  return (await api.get<ApiCategorySummary>('/api/v1/reports/category-summary', { params: { year } })).data;
 }
 
 export async function createTransaction(input: {

@@ -85,5 +85,6 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('/reports/annual', 'annualReport');
         Route::get('/reports/charity', 'charityReport');
         Route::get('/reports/others', 'othersReport');
+        Route::get('/reports/category-summary', 'categorySummary');
     });
 });

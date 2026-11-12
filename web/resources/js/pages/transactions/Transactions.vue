@@ -494,10 +494,10 @@ const goToCurrentMonth = () => {
                             </td>
                             <td
                                 v-if="auth.user?.user_type === 'admin'"
-                                class="px-6 py-4"
+                                class="px-6 py-4 min-w-[120px]"
                             >
                                 <span
-                                    class="rounded-full px-2.5 py-1 text-xs font-semibold"
+                                    class="rounded-full px-2.5 py-1 text-xs font-semibold truncate"
                                     :class="{
                                         'bg-blue-50 text-blue-600':
                                             t.type === 'income',

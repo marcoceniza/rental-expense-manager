@@ -23,6 +23,7 @@ export interface Category {
   type: TransactionType;
   isCharity?: boolean;
   isOther?: boolean;
+  transactionsCount?: number;
 }
 
 export interface RecurringTransaction {

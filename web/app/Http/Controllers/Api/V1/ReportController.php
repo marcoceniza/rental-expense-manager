@@ -136,4 +136,32 @@ class ReportController extends ApiController
             'net' => $income - ($expense + $liability),
         ];
     }
+
+    public function categorySummary(Request $request): JsonResponse
+    {
+        $year = (int) $request->query('year', now()->year);
+
+        $start = Carbon::create($year, 1, 1)->startOfYear();
+        $end = Carbon::create($year, 12, 31)->endOfYear();
+
+        $query = Transaction::filtered($start, $end, $request->user());
+
+        $categoryReport = $query->get()
+            ->groupBy('category.name')
+            ->map(function ($items, $categoryName) {
+                $first = $items->first();
+
+                return [
+                    'name' => $categoryName,
+                    'type' => $first->category->type ?? 'unknown',
+                    'total' => $items->sum('amount'),
+                ];
+            })
+            ->values();
+
+        return response()->json([
+            'categoryReport' => $categoryReport,
+            'year' => $year,
+        ]);
+    }
 }

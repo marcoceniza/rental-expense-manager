@@ -11,7 +11,7 @@ import {
   TextInput,
   Switch,
 } from 'react-native';
-import { Pencil, Plus, Tag, Search, Trash2, X } from 'lucide-react-native';
+import { Pencil, Plus, Tag, Search, Trash2, X, FileText } from 'lucide-react-native';
 import { isAxiosError } from 'axios';
 import { useApp } from '../context/AppContext';
 import { Card, EmptyState } from '../components/DisplayComponents';
@@ -92,11 +92,22 @@ export default function CategoriesScreen() {
     }
   };
 
-  const confirmDelete = (id: string, categoryName: string) => {
-    Alert.alert('Delete category?', `${categoryName} will be deleted if it is not in use.`, [
-      { text: 'Cancel', style: 'cancel' },
-      { text: 'Delete', style: 'destructive', onPress: () => void handleDelete(id) },
-    ]);
+  const confirmDelete = (id: string, categoryName: string, transactionsCount: number) => {
+    const inUse = transactionsCount > 0;
+    const msg = inUse
+      ? `${categoryName} has ${transactionsCount} transaction(s) and cannot be deleted.`
+      : `${categoryName} will be deleted.`;
+    const showDelete = !inUse;
+    Alert.alert(
+      inUse ? 'Category in use' : 'Delete category?',
+      msg,
+      [
+        { text: 'Cancel', style: 'cancel' as const },
+        ...(showDelete
+          ? [{ text: 'Delete', style: 'destructive' as const, onPress: () => void handleDelete(id) }]
+          : []),
+      ],
+    );
   };
 
   return (
@@ -196,19 +207,28 @@ export default function CategoriesScreen() {
                       <Pencil size={16} color="#64748b" />
                     </TouchableOpacity>
                     <TouchableOpacity
-                      onPress={() => confirmDelete(cat.id, cat.name)}
+                      onPress={() => confirmDelete(cat.id, cat.name, cat.transactionsCount ?? 0)}
                       accessibilityRole="button"
                       accessibilityLabel={`Delete ${cat.name}`}
                       className="p-1"
+                      disabled={(cat.transactionsCount ?? 0) > 0}
                     >
-                      <Trash2 size={16} color="#94a3b8" />
+                      <Trash2 size={16} color={(cat.transactionsCount ?? 0) > 0 ? '#cbd5e1' : '#94a3b8'} />
                     </TouchableOpacity>
                   </View>
                 </View>
                 <Text className="text-sm font-bold leading-[21px] text-slate-900">{cat.name}</Text>
-                <Text className="text-[13px] font-extrabold tracking-[0.5px]" style={{ color }}>
-                  {cat.type}
-                </Text>
+                <View className="flex-row items-center justify-between">
+                  <Text className="text-[13px] font-extrabold tracking-[0.5px]" style={{ color }}>
+                    {cat.type}
+                  </Text>
+                  <View className="flex-row items-center gap-1">
+                    <FileText size={12} color="#94a3b8" />
+                    <Text className="text-[12px] font-semibold text-slate-500">
+                      {cat.transactionsCount ?? 0} transaction(s)
+                    </Text>
+                  </View>
+                </View>
               </Card>
             );
           })}

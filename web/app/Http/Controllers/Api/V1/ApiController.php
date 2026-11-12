@@ -26,6 +26,7 @@ abstract class ApiController extends Controller
             'type' => $category->type,
             'is_tuition' => $category->is_tuition,
             'is_other' => $category->is_other,
+            'transactions_count' => (int) ($category->transactions_count ?? 0),
         ];
     }
 
