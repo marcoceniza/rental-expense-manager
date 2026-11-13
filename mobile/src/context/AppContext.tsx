@@ -52,6 +52,8 @@ interface AppContextType {
   authError: string | null;
   signIn: (email: string, password: string) => Promise<void>;
   signOut: () => Promise<void>;
+  fetchCharityTransactions: (year: number) => Promise<Transaction[]>;
+  fetchOtherTransactions: (year: number) => Promise<Transaction[]>;
   transactions: Transaction[];
   transactionsLastPage: number;
   trashedTransactions: Transaction[];
@@ -198,19 +200,25 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const [activityLogs, setActivityLogs] = useState<ActivityLog[]>([]);
   const [users, setUsers] = useState<UserAccount[]>([]);
 
+  const fetchCharityTransactions = useCallback(async (year: number) => {
+    const data = await getCharityTransactions(year);
+    return data.map(toTransaction);
+  }, []);
+
+  const fetchOtherTransactions = useCallback(async (year: number) => {
+    const data = await getOtherTransactions(year);
+    return data.map(toTransaction);
+  }, []);
+
   const loadRemoteData = useCallback(async (user: ApiUser) => {
-    const year = new Date().getFullYear();
     let apiUsers: ApiUserAccount[] = [];
     let apiLogs: ApiLog[] = [];
     let apiTrashedTransactions: ApiTransaction[] = [];
-    const [apiCategories, paginated, charityTransactions, otherTransactions, apiRecurring] =
-      await Promise.all([
-        getCategories(),
-        getPaginatedTransactions(1),
-        getCharityTransactions(year),
-        getOtherTransactions(year),
-        getRecurringTransactions(),
-      ]);
+    const [apiCategories, paginated, apiRecurring] = await Promise.all([
+      getCategories(),
+      getPaginatedTransactions(1),
+      getRecurringTransactions(),
+    ]);
     if (user.user_type === 'admin') {
       [apiUsers, apiLogs, apiTrashedTransactions] = await Promise.all([
         getUsers(),
@@ -219,27 +227,13 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       ]);
     }
 
-    const allTransactions = [
-      ...paginated.data,
-      ...charityTransactions,
-      ...otherTransactions,
-    ];
-    const uniqueTransactions = Array.from(
-      new Map(allTransactions.map((transaction) => [transaction.id, transaction])).values(),
-    );
-
     setCategories(apiCategories.map(toCategory));
     setTransactionsLastPage(paginated.last_page);
     setTransactionsPage(1);
-    setTransactions(uniqueTransactions
-      .sort((a, b) => b.transaction_date.localeCompare(a.transaction_date))
-      .map(toTransaction));
+    setTransactions(paginated.data.map(toTransaction));
     setTrashedTransactions(apiTrashedTransactions.map(toTransaction));
     setRecurring(apiRecurring.map(toRecurring));
-    setUsers(apiUsers.map((apiUser) => ({
-      ...toUserAccount(apiUser),
-      createdAt: apiUser.created_at?.slice(0, 10) ?? '',
-    })));
+    setUsers(apiUsers.map(toUserAccount));
     setActivityLogs(apiLogs.map(toActivityLog));
   }, []);
 
@@ -393,10 +387,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       password,
       password_confirmation: password,
     });
-    setUsers((prev) => [...prev, {
-      ...toUserAccount(created),
-      createdAt: created.created_at?.slice(0, 10) ?? '',
-    }]);
+    setUsers((prev) => [...prev, toUserAccount(created)]);
   };
 
   const signIn = async (email: string, password: string) => {
@@ -438,6 +429,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         authError,
         signIn,
         signOut,
+        fetchCharityTransactions,
+        fetchOtherTransactions,
         transactions,
         trashedTransactions,
         loadTrashedTransactions,

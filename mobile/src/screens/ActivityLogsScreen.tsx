@@ -16,9 +16,6 @@ export default function ActivityLogsScreen() {
   const [currentPage, setCurrentPage] = useState(1);
   const [rowsPerPage, setRowsPerPage] = useState(10);
 
-  const uniqueActions = useMemo(() => [...new Set(activityLogs.map((l) => l.action))].sort(), [activityLogs]);
-  const uniqueUsers = useMemo(() => [...new Set(activityLogs.map((l) => l.user))].sort(), [activityLogs]);
-
   const filtered = useMemo(() => {
     let result = activityLogs;
 

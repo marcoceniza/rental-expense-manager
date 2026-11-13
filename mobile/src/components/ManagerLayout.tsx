@@ -106,9 +106,12 @@ export default function ManagerLayout() {
   const [isAccountOpen, setIsAccountOpen] = React.useState(false);
   const [headerTop, setHeaderTop] = React.useState(0);
   const [accountButtonBottom, setAccountButtonBottom] = React.useState(0);
+  const visiblePrimaryTabs = currentUser?.role === 'Admin'
+    ? primaryTabs
+    : primaryTabs.filter((tab) => tab.id !== 'categories');
   const visibleMoreTabs = currentUser?.role === 'Admin'
     ? moreTabs
-    : moreTabs.filter((tab) => !['create-user', 'activity-logs', 'others'].includes(tab.id));
+    : moreTabs.filter((tab) => !['recurring', 'create-user', 'activity-logs', 'others'].includes(tab.id));
   const isMoreActive = visibleMoreTabs.some((tab) => tab.id === activeTab);
 
   const screens: Record<NavTab, React.ReactNode> = {
@@ -194,7 +197,7 @@ export default function ManagerLayout() {
         style={{ paddingBottom: insets.bottom }}
       >
         <View className="flex-row items-center px-1 py-2">
-          {primaryTabs.map((tab) => {
+          {visiblePrimaryTabs.map((tab) => {
             const isActive = activeTab === tab.id;
             return (
               <TouchableOpacity

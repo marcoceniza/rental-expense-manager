@@ -47,6 +47,18 @@ export interface ApiTransaction {
   user: ApiUser | null;
 }
 
+export interface ApiDashboard {
+  month: string;
+  categories: ApiCategory[];
+  monthly_report: {
+    income: number | string;
+    expense: number | string;
+    liability: number | string;
+    net: number | string;
+  };
+  transactions: ApiTransaction[];
+}
+
 export interface ApiRecurring {
   id: number;
   category_id: number;

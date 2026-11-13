@@ -29,6 +29,15 @@ import EditTransactionModal from '../components/EditTransactionModal';
 import { formatCurrency } from '../utils/formatters';
 import { Transaction, TransactionType } from '../types';
 
+const months = [
+  'All',
+  ...Array.from({ length: 12 }, (_, index) =>
+    new Date(2000, index, 1).toLocaleDateString('en-US', {
+      month: 'long',
+    }),
+  ),
+];
+
 export default function TransactionsScreen() {
   const {
     transactions,
@@ -44,6 +53,7 @@ export default function TransactionsScreen() {
     categories,
     currentUser,
   } = useApp();
+  const isAdmin = currentUser?.role === 'Admin';
 
   React.useEffect(() => {
     void resetTransactions();
@@ -64,16 +74,9 @@ export default function TransactionsScreen() {
   const [date, setDate] = useState(new Date());
   const [isDatePickerOpen, setIsDatePickerOpen] = useState(false);
 
-  const year = new Date().getFullYear();
-  const months = [
-    'All',
-    ...Array.from({ length: 12 }, (_, index) =>
-      new Date(year, 11 - index, 1).toLocaleDateString('en-US', {
-        month: 'short',
-        year: 'numeric',
-      }),
-    ),
-  ];
+  const availableCategories = categories.filter(
+    (category) => category.type === txType && (isAdmin || !category.isOther),
+  );
 
   const { filtered, incomeTotal, expenseTotal, liabilityTotal } = useMemo(() => {
     const filtered: Transaction[] = [];
@@ -84,13 +87,24 @@ export default function TransactionsScreen() {
     for (const transaction of transactions) {
       if (transaction.isCharity || transaction.isOther) continue;
       if (selectedType !== 'All' && transaction.type !== selectedType.toUpperCase()) continue;
-      if (selectedMonth !== 'All' && !transaction.date.includes(selectedMonth.split(' ')[0])) continue;
+      if (selectedMonth !== 'All') {
+        const monthNumber = months.indexOf(selectedMonth);
+        if (transaction.transactionDate.slice(5, 7) !== String(monthNumber).padStart(2, '0')) continue;
+      }
       if (searchTerm.trim()) {
         const query = searchTerm.toLowerCase();
-        const matches =
-          transaction.description.toLowerCase().includes(query) ||
-          transaction.category.toLowerCase().includes(query) ||
-          transaction.subDescription?.toLowerCase().includes(query);
+        const searchableFields = [
+          transaction.description,
+          transaction.category,
+          transaction.subDescription ?? '',
+          transaction.type,
+          String(transaction.amount),
+          transaction.date,
+          transaction.transactionDate,
+        ];
+        const matches = searchableFields.some((field) =>
+          field.toLowerCase().includes(query),
+        );
         if (!matches) continue;
       }
 
@@ -385,36 +399,44 @@ export default function TransactionsScreen() {
                       {item.subDescription && (
                         <Text className="mt-px text-[14px] text-slate-400">{item.subDescription}</Text>
                       )}
-                      <View className="mt-1 flex-row items-center gap-1.5">
-                        <User size={11} color="#94a3b8" />
-                        <Text className="text-[11px] text-slate-500">{item.addedBy}</Text>
-                      </View>
+                      {isAdmin && (
+                        <View className="mt-1 flex-row items-center gap-1.5">
+                          <User size={11} color="#94a3b8" />
+                          <Text className="text-[11px] text-slate-500">{item.addedBy}</Text>
+                        </View>
+                      )}
                     </View>
                     <Text className="text-[18px] font-extrabold" style={{ color: amountColor }}>
                       {formatCurrency(item.amount, { showPlusSign: isIncome, isNegative: !isIncome })}
                     </Text>
                   </View>
 
-                  <View className="flex-row items-center justify-between border-t border-slate-50 pt-1">
-                    <Badge label={item.category} type={item.type} numberOfLines={1} ellipsizeMode="tail" style={{ maxWidth: '60%' }} />
+                  <View className={`flex-row items-center border-t border-slate-50 pt-1 ${isAdmin ? 'justify-between' : ''}`}>
+                    {isAdmin && (
+                      <Badge label={item.category} type={item.type} numberOfLines={1} ellipsizeMode="tail" style={{ maxWidth: '60%', marginRight: 8 }} />
+                    )}
                     <View className="flex-row items-center gap-2 flex-shrink-0">
                       <Text className="text-[14px] text-slate-500">{item.date}</Text>
-                      <TouchableOpacity
-                        onPress={() => setEditingTransaction(item)}
-                        accessibilityRole="button"
-                        accessibilityLabel={`Edit ${item.description}`}
-                        className="p-1"
-                      >
-                        <Pencil size={14} color="#64748b" />
-                      </TouchableOpacity>
-                      <TouchableOpacity
-                        onPress={() => confirmDelete(item.id, item.description)}
-                        accessibilityRole="button"
-                        accessibilityLabel={`Delete ${item.description}`}
-                        className="p-1"
-                      >
-                        <Trash2 size={14} color="#94a3b8" />
-                      </TouchableOpacity>
+                      {isAdmin && (
+                        <>
+                          <TouchableOpacity
+                            onPress={() => setEditingTransaction(item)}
+                            accessibilityRole="button"
+                            accessibilityLabel={`Edit ${item.description}`}
+                            className="p-1"
+                          >
+                            <Pencil size={14} color="#64748b" />
+                          </TouchableOpacity>
+                          <TouchableOpacity
+                            onPress={() => confirmDelete(item.id, item.description)}
+                            accessibilityRole="button"
+                            accessibilityLabel={`Delete ${item.description}`}
+                            className="p-1"
+                          >
+                            <Trash2 size={14} color="#94a3b8" />
+                          </TouchableOpacity>
+                        </>
+                      )}
                     </View>
                   </View>
                 </Card>
@@ -473,7 +495,9 @@ export default function TransactionsScreen() {
                         key={type}
                         onPress={() => {
                           setTxType(type);
-                          const nextCategory = categories.find((item) => item.type === type);
+                          const nextCategory = categories.find(
+                            (item) => item.type === type && (isAdmin || !item.isOther),
+                          );
                           setCategoryId(nextCategory?.id ?? '');
                         }}
                         className={`flex-1 items-center rounded-lg border py-2 ${isSelected ? 'border-blue-700 bg-blue-50' : 'border-slate-200'}`}
@@ -534,9 +558,9 @@ export default function TransactionsScreen() {
                 </Text>
                 <ScrollView horizontal showsHorizontalScrollIndicator={false}>
                   <View className="flex-row">
-                    {categories.filter((item) => item.type === txType).length === 0 ? (
+                    {availableCategories.length === 0 ? (
                       <Text className="py-2 text-[14px] text-slate-500">No categories for this transaction type. Add a category first.</Text>
-                    ) : categories.filter((item) => item.type === txType).map((item) => {
+                    ) : availableCategories.map((item) => {
                       const isSelected = categoryId === item.id;
                       return (
                         <TouchableOpacity

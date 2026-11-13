@@ -14,7 +14,6 @@ export interface Transaction {
   addedBy: string;
   isCharity?: boolean;
   isOther?: boolean;
-  notes?: string;
 }
 
 export interface Category {
@@ -46,10 +45,7 @@ export interface ActivityLog {
   ipAddress: string;
   details?: {
     userAgent?: string;
-    method?: string;
-    url?: string;
-    payload?: Record<string, any>;
-    status?: string;
+    payload?: Record<string, unknown>;
   };
 }
 

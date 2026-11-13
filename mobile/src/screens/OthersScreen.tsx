@@ -1,5 +1,5 @@
-import React, { useState, useMemo } from 'react';
-import { Alert, View, Text, ScrollView, TouchableOpacity, Modal, TextInput } from 'react-native';
+import React, { useEffect, useState } from 'react';
+import { Alert, View, Text, ScrollView, TouchableOpacity } from 'react-native';
 import { LayoutGrid, Pencil, Trash2, ChevronLeft, ChevronRight, User } from 'lucide-react-native';
 import { useApp } from '../context/AppContext';
 import { Card, Badge, EmptyState } from '../components/DisplayComponents';
@@ -8,26 +8,42 @@ import { formatCurrency } from '../utils/formatters';
 import type { Transaction } from '../types';
 
 export default function OthersScreen() {
-  const { transactions, deleteTransaction, currentUser } = useApp();
+  const { fetchOtherTransactions, deleteTransaction } = useApp();
   const [editingTransaction, setEditingTransaction] = useState<Transaction | null>(null);
   const [selectedYear, setSelectedYear] = useState<number>(new Date().getFullYear());
-  const [showYearPicker, setShowYearPicker] = useState(false);
+  const [othersList, setOthersList] = useState<Transaction[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [refreshKey, setRefreshKey] = useState(0);
 
-  const years = useMemo(() => {
-    const currentYear = new Date().getFullYear();
-    const yearList = [];
-    for (let y = 2024; y <= currentYear + 3; y++) yearList.push(y);
-    return yearList;
-  }, []);
+  useEffect(() => {
+    let active = true;
+    fetchOtherTransactions(selectedYear)
+      .then((items) => {
+        if (active) setOthersList(items);
+      })
+      .catch((error: unknown) => {
+        if (active) {
+          Alert.alert(
+            'Unable to load other transactions',
+            error instanceof Error ? error.message : 'Please try again.',
+          );
+        }
+      })
+      .finally(() => {
+        if (active) setIsLoading(false);
+      });
 
-  const othersList = useMemo(() => {
-    return transactions.filter((t) => t.isOther && t.date.endsWith(String(selectedYear)));
-  }, [transactions, selectedYear]);
+    return () => {
+      active = false;
+    };
+  }, [fetchOtherTransactions, refreshKey, selectedYear]);
 
-  const total = useMemo(() => othersList.reduce((sum, t) => sum + t.amount, 0), [othersList]);
+  const total = othersList.reduce((sum, transaction) => sum + transaction.amount, 0);
   const handleDelete = async (id: string) => {
     try {
       await deleteTransaction(id);
+      setIsLoading(true);
+      setRefreshKey((key) => key + 1);
     } catch (error: unknown) {
       Alert.alert('Unable to delete transaction', error instanceof Error ? error.message : 'Please try again.');
     }
@@ -55,17 +71,22 @@ export default function OthersScreen() {
 
           {/* Year navigation */}
           <View className="flex-row items-center gap-2">
-            <TouchableOpacity onPress={() => selectedYear > 2024 && setSelectedYear(selectedYear - 1)}>
+            <TouchableOpacity
+              onPress={() => {
+                if (selectedYear > 2024) {
+                  setIsLoading(true);
+                  setSelectedYear(selectedYear - 1);
+                }
+              }}
+            >
               <ChevronLeft size={20} color={selectedYear > 2024 ? '#475569' : '#cbd5e1'} />
             </TouchableOpacity>
+            <Text className="text-[14px] font-bold text-slate-700">{selectedYear}</Text>
             <TouchableOpacity
-              onPress={() => setShowYearPicker(!showYearPicker)}
-              className="rounded-lg border border-slate-200 bg-white px-3 py-1.5"
-            >
-              <Text className="text-[14px] font-bold text-slate-700">{selectedYear}</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              onPress={() => setSelectedYear(selectedYear + 1)}
+              onPress={() => {
+                setIsLoading(true);
+                setSelectedYear(selectedYear + 1);
+              }}
               disabled={selectedYear >= new Date().getFullYear()}
             >
               <ChevronRight size={20} color={selectedYear < new Date().getFullYear() ? '#475569' : '#cbd5e1'} />
@@ -88,7 +109,9 @@ export default function OthersScreen() {
             Transactions ({othersList.length})
           </Text>
 
-          {othersList.length === 0 ? (
+          {isLoading ? (
+            <EmptyState message="Loading other transactions..." />
+          ) : othersList.length === 0 ? (
             <EmptyState message="No other transactions found for this year." />
           ) : othersList.map((item) => (
             <Card key={item.id} className="gap-2 p-3.5">
@@ -106,7 +129,13 @@ export default function OthersScreen() {
               </View>
 
               <View className="flex-row items-center justify-between border-t border-slate-50 pt-1.5">
-                <Badge label={item.category} type="INCOME" />
+                <Badge
+                  label={item.category}
+                  type="INCOME"
+                  numberOfLines={1}
+                  ellipsizeMode="tail"
+                  style={{ maxWidth: '60%', marginRight: 8 }}
+                />
                 <View className="flex-row items-center gap-2">
                   <Text className="text-[14px] text-slate-500">{item.date}</Text>
                   <TouchableOpacity
@@ -136,7 +165,11 @@ export default function OthersScreen() {
       <EditTransactionModal
         key={editingTransaction.id}
         transaction={editingTransaction}
-        onClose={() => setEditingTransaction(null)}
+        onClose={() => {
+          setEditingTransaction(null);
+          setIsLoading(true);
+          setRefreshKey((key) => key + 1);
+        }}
       />
     )}
     </>

@@ -4,6 +4,7 @@ import type {
   ApiCategory,
   ApiCollection,
   ApiCategorySummary,
+  ApiDashboard,
   ApiLog,
   ApiRecurring,
   ApiReportTransactionCollection,
@@ -92,10 +93,6 @@ export async function getPaginatedTransactions(page: number = 1): Promise<{
   return { data: res.data.data, last_page: res.data.meta.last_page };
 }
 
-export function getTransactions(): Promise<ApiTransaction[]> {
-  return getAllPages<ApiTransaction>('/api/v1/transactions');
-}
-
 export function getTrashedTransactions(): Promise<ApiTransaction[]> {
   return getAllPages<ApiTransaction>('/api/v1/transactions/trash');
 }
@@ -134,6 +131,10 @@ export async function getAnnualReport(year: number): Promise<ApiAnnualReport> {
 
 export async function getCategorySummary(year: number): Promise<ApiCategorySummary> {
   return (await api.get<ApiCategorySummary>('/api/v1/reports/category-summary', { params: { year } })).data;
+}
+
+export async function getDashboard(month: string): Promise<ApiDashboard> {
+  return (await api.get<ApiDashboard>('/api/v1/reports/dashboard', { params: { month } })).data;
 }
 
 export async function createTransaction(input: {
