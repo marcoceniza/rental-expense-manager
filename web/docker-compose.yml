@@ -1,0 +1,49 @@
+# Laravel app containers connect to the shared MySQL Compose project.
+# See C:/Users/marco/docker/laravel-mysql/README.md for adding other apps.
+#
+# Database client: DBeaver (desktop tool) is the primary client now, pointed at the
+# MySQL server on 127.0.0.1:3306 (database `rental`, user `rental_app` from web/.env).
+# Adminer was removed from this stack in favor of DBeaver.
+
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: rental-expense-app
+    restart: unless-stopped
+    ports:
+      - '127.0.0.1:8000:8000'
+    volumes:
+      - .:/var/www/html
+    environment:
+      APP_ENV: local
+      APP_DEBUG: 'true'
+      APP_URL: http://localhost:8000
+      DB_CONNECTION: ${DB_CONNECTION:-mysql}
+      DB_HOST: ${DB_HOST:-mysql}
+      DB_PORT: ${DB_PORT:-3306}
+      DB_DATABASE: ${DB_DATABASE:?Set DB_DATABASE in web/.env}
+      DB_USERNAME: ${DB_USERNAME:?Set DB_USERNAME in web/.env}
+      DB_PASSWORD: ${DB_PASSWORD:?Set DB_PASSWORD in web/.env}
+    command:
+      - sh
+      - /var/www/html/docker/wait-for-db.sh
+      - php
+      - artisan
+      - serve
+      - --host=0.0.0.0
+      - --port=8000
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://127.0.0.1:8000/login >/dev/null || exit 1"]
+      interval: 30s
+      timeout: 15s
+      retries: 3
+      start_period: 30s
+    networks:
+      - laravel-db
+
+networks:
+  laravel-db:
+    external: true
+    name: laravel-db
