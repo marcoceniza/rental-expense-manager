@@ -3,6 +3,9 @@ set -eu
 
 cd /var/www/html
 
+max_attempts=60
+attempts=0
+
 until php -r '
 try {
     new PDO(
@@ -14,7 +17,12 @@ try {
     exit(1);
 }
 ' >/dev/null 2>&1; do
-    echo "Waiting for MySQL at ${DB_HOST}:${DB_PORT}..."
+    attempts=$((attempts + 1))
+    if [ "$attempts" -ge "$max_attempts" ]; then
+        echo "ERROR: cannot reach MySQL at ${DB_HOST}:${DB_PORT} as ${DB_USERNAME} after ${max_attempts} attempts." >&2
+        exit 1
+    fi
+    echo "Waiting for MySQL at ${DB_HOST}:${DB_PORT}... (${attempts}/${max_attempts})"
     sleep 2
 done
 

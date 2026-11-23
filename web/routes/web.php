@@ -8,7 +8,14 @@ use App\Http\Controllers\Transactions\ReportController;
 use App\Http\Controllers\Transactions\TransactionController;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Route;
+
+Route::get('/health', function () {
+    DB::select('select 1');
+
+    return response('ok', 200)->header('Content-Type', 'text/plain');
+});
 
 Route::middleware('guest')->group(function () {
     Route::inertia('/login', 'auth/Login')->name('login');

@@ -1,9 +1,9 @@
 # Laravel app containers connect to the shared MySQL Compose project.
-# See C:/Users/marco/docker/laravel-mysql/README.md for adding other apps.
+# See C:/Users/marco/docker/database/README.md for adding other apps.
 #
-# Database client: DBeaver (desktop tool) is the primary client now, pointed at the
-# MySQL server on 127.0.0.1:3306 (database `rental`, user `rental_app` from web/.env).
-# Adminer was removed from this stack in favor of DBeaver.
+# MySQL is managed in Docker and is reachable by this app on the database network.
+
+name: rental-expense-manager
 
 services:
   app:
@@ -13,7 +13,7 @@ services:
     container_name: rental-expense-app
     restart: unless-stopped
     ports:
-      - '127.0.0.1:8000:8000'
+      - '0.0.0.0:8000:8000'
     volumes:
       - .:/var/www/html
     environment:
@@ -35,15 +35,15 @@ services:
       - --host=0.0.0.0
       - --port=8000
     healthcheck:
-      test: ["CMD-SHELL", "curl -fsS http://127.0.0.1:8000/login >/dev/null || exit 1"]
+      test: ["CMD-SHELL", "curl -fsS http://127.0.0.1:8000/health >/dev/null || exit 1"]
       interval: 30s
       timeout: 15s
       retries: 3
       start_period: 30s
     networks:
-      - laravel-db
+      - database
 
 networks:
-  laravel-db:
+  database:
     external: true
-    name: laravel-db
+    name: database

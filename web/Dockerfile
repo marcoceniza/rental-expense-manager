@@ -1,4 +1,4 @@
-FROM php:8.4-fpm
+FROM php:8.4.28-fpm
 
 # Install system deps + PHP extensions Laravel needs
 RUN apt-get update && apt-get install -y \
@@ -12,18 +12,16 @@ RUN apt-get update && apt-get install -y \
     git \
     curl \
     unzip \
-  && docker-php-ext-install pdo_mysql mbstring exif pcntl bcmath gd zip opcache xml
+  && docker-php-ext-install pdo_mysql mbstring exif pcntl bcmath gd zip opcache xml \
+  && rm -rf /var/lib/apt/lists/*
 
 # Install Composer
-COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
+COPY --from=composer:2.11.2 /usr/bin/composer /usr/bin/composer
 
 # Set working dir
 WORKDIR /var/www/html
 
-# Install node and pnpm for Vite
-RUN curl -fsSL https://deb.nodesource.com/setup_22.x | bash - && \
-    apt-get install -y nodejs && \
-    npm install -g pnpm
+# Frontend assets are built on the host with npm; no Node tooling in this image.
 
 # dompdf needs ext-dom (part of xml, already installed above)
 

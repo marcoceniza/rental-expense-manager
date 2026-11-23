@@ -17,7 +17,7 @@ import {
 import type { ApiFieldErrors } from './types';
 
 const API_BASE_URL =
-  process.env.EXPO_PUBLIC_API_BASE_URL ?? 'http://192.168.254.123:8000';
+  process.env.EXPO_PUBLIC_API_BASE_URL ?? 'http://localhost:8000';
 
 const ACCESS_TOKEN_KEY = 'rem_access_token';
 const MAX_RETRIES = 2;
